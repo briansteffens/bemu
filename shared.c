@@ -4,14 +4,6 @@
 
 #include "shared.h"
 
-const int OPERAND_BYTES_LEN = 9;
-const int DEBUG_STR_LEN = 255;
-const int MAX_ENCODED_INSTRUCTION_LEN = 2 + 9 * 2;
-
-const int IMG_HDR_LEN = 16;
-const int IMG_HDR_CODE_BYTES = 0;
-const int IMG_HDR_ENTRY_POINT = 8;
-
 void instruction_array_new(instruction_array* target)
 {
     target->allocated = 1;
@@ -36,7 +28,7 @@ instruction* instruction_array_add(instruction_array* target)
     return &target->items[target->len - 1];
 }
 
-int operand_decode(unsigned char* in, operand* oper)
+int operand_decode(byte* in, operand* oper)
 {
     oper->type = (*in & (1 << 0)) >> 0;
     oper->mode = (*in & (1 << 1)) >> 1;
@@ -45,7 +37,7 @@ int operand_decode(unsigned char* in, operand* oper)
     return 9;
 }
 
-int operands(unsigned char opcode)
+int operands(byte opcode)
 {
     switch (opcode)
     {
@@ -54,15 +46,18 @@ int operands(unsigned char opcode)
         case OP_JMP:
             return 1;
 
+        case OP_EXIT:
+            return 0;
+
         default:
             printf("Unrecognized opcode\n");
             exit(4);
     }
 }
 
-int instruction_decode(unsigned char* in, instruction* out)
+int instruction_decode(byte* in, instruction* out)
 {
-    unsigned char* src = in;
+    byte* src = in;
 
     out->opcode = *(src++);
     out->size = *(src++);
@@ -74,10 +69,10 @@ int instruction_decode(unsigned char* in, instruction* out)
         src += operand_decode(src, &out->operands[i]);
     }
 
-    return src - in - 1;
+    return src - in;
 }
 
-const char* operand_type_to_string(unsigned char type)
+const char* operand_type_to_string(byte type)
 {
     switch (type)
     {
@@ -93,7 +88,7 @@ const char* operand_type_to_string(unsigned char type)
     }
 }
 
-const char* operand_mode_to_string(unsigned char mode)
+const char* operand_mode_to_string(byte mode)
 {
     switch (mode)
     {
@@ -122,7 +117,7 @@ void operand_to_string(operand* oper, char* out)
     );
 }
 
-const char* opcode_to_string(unsigned char opcode)
+const char* opcode_to_string(byte opcode)
 {
     switch (opcode)
     {
@@ -135,13 +130,16 @@ const char* opcode_to_string(unsigned char opcode)
         case OP_JMP:
             return "jmp";
 
+        case OP_EXIT:
+            return "exit";
+
         default:
             printf("Unrecognized opcode\n");
             exit(3);
     }
 }
 
-const char* size_to_string(unsigned char size)
+const char* size_to_string(byte size)
 {
     switch (size)
     {
@@ -192,7 +190,7 @@ void instruction_array_print(instruction_array* target)
     }
 }
 
-unsigned char* read_file(const char* filename, int* out_bytes_read)
+byte* read_file(const char* filename, int* out_bytes_read)
 {
     FILE* file = fopen(filename, "r");
 
@@ -209,7 +207,7 @@ unsigned char* read_file(const char* filename, int* out_bytes_read)
         return false;
     }
 
-    unsigned char* ret = malloc(sizeof(unsigned char) * file_stat.st_size);
+    byte* ret = malloc(sizeof(byte) * file_stat.st_size);
 
     if (!fread(ret, file_stat.st_size, 1, file))
     {
@@ -222,4 +220,12 @@ unsigned char* read_file(const char* filename, int* out_bytes_read)
     *out_bytes_read = file_stat.st_size;
 
     return ret;
+}
+
+void encode_u64(unsigned long long in, unsigned char* out)
+{
+    for (int shift = 0; shift <= 56; shift += 8)
+    {
+        *(out++) = (in >> shift) & 0xff;
+    }
 }

@@ -1,18 +1,24 @@
 #include <stdbool.h>
 
-extern const int OPERAND_BYTES_LEN;
-extern const int DEBUG_STR_LEN;
-extern const int MAX_ENCODED_INSTRUCTION_LEN;
+#define OPERAND_BYTES_LEN 9
+#define DEBUG_STR_LEN 255
+#define MAX_ENCODED_INSTRUCTION_LEN 2 + 9 * 2
 
-extern const int IMG_HDR_LEN;
-extern const int IMG_HDR_CODE_BYTES;
-extern const int IMG_HDR_ENTRY_POINT;
+#define IMG_HDR_LEN 16
+#define IMG_HDR_CODE_BYTES 0
+#define IMG_HDR_ENTRY_POINT 8
+
+#define REGISTER_COUNT 7
+
+typedef unsigned long long u64;
+typedef unsigned char byte;
 
 enum opcodes
 {
     OP_PUSH,
     OP_POP,
-    OP_JMP
+    OP_JMP,
+    OP_EXIT
 };
 
 enum sizes
@@ -25,10 +31,13 @@ enum sizes
 
 enum registers
 {
-    R1 = 1,
+    R0,
+    R1,
     R2,
     R3,
-    R4
+    R4,
+    RIP,
+    RSP
 };
 
 enum operand_types
@@ -45,15 +54,15 @@ enum addresing_modes
 
 typedef struct operand
 {
-    unsigned char type;
-    unsigned char mode;
+    byte type;
+    byte mode;
     long long data;
 } operand;
 
 typedef struct instruction
 {
-    unsigned char opcode;
-    unsigned char size;
+    byte opcode;
+    byte size;
     operand operands[2];
 } instruction;
 
@@ -68,24 +77,26 @@ void instruction_array_new(instruction_array* target);
 
 instruction* instruction_array_add(instruction_array* target);
 
-int operand_decode(unsigned char* in, operand* oper);
+int operand_decode(byte* in, operand* oper);
 
-int operands(unsigned char opcode);
+int operands(byte opcode);
 
-int instruction_decode(unsigned char* in, instruction* out);
+int instruction_decode(byte* in, instruction* out);
 
-const char* operand_type_to_string(unsigned char type);
+const char* operand_type_to_string(byte type);
 
-const char* operand_mode_to_string(unsigned char mode);
+const char* operand_mode_to_string(byte mode);
 
 void operand_to_string(operand* oper, char* out);
 
-const char* opcode_to_string(unsigned char opcode);
+const char* opcode_to_string(byte opcode);
 
-const char* size_to_string(unsigned char size);
+const char* size_to_string(byte size);
 
 void instruction_print(instruction* inst);
 
 void instruction_array_print(instruction_array* target);
 
-unsigned char* read_file(const char* filename, int* out_bytes_read);
+byte* read_file(const char* filename, int* out_bytes_read);
+
+void encode_u64(unsigned long long in, unsigned char* out);

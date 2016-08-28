@@ -245,6 +245,10 @@ unsigned char opcode_from_bstring(bstring src)
     {
         return OP_JMP;
     }
+    else if (bstring_cmp(src, bstring_from_char("exit")))
+    {
+        return OP_EXIT;
+    }
 
     printf("Unrecognized opcode\n");
     exit(6);
@@ -252,6 +256,10 @@ unsigned char opcode_from_bstring(bstring src)
 
 unsigned char register_from_bstring(bstring src)
 {
+    if (bstring_cmp(src, bstring_from_char("r0")))
+    {
+        return R0;
+    }
     if (bstring_cmp(src, bstring_from_char("r1")))
     {
         return R1;
@@ -424,14 +432,6 @@ void resolve_jumps(
         oper->type = IMMEDIATE;
         oper->mode = LITERAL;
         oper->data = label->address;
-    }
-}
-
-void encode_u64(unsigned long long in, unsigned char* out)
-{
-    for (int shift = 0; shift <= 56; shift += 8)
-    {
-        *(out++) = (in >> shift) & 0xff;
     }
 }
 

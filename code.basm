@@ -1,4 +1,10 @@
+	push 21
+
 start:
 	jmp hello
+	push 12
+
 hello:
 	push 123
+	pop r0
+	exit
