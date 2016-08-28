@@ -1,0 +1,4 @@
+start:
+	jmp hello
+hello:
+	push 123

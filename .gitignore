@@ -1,0 +1,5 @@
+*.o
+o
+basm
+bvm
+b.out
