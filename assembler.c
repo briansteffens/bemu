@@ -268,6 +268,14 @@ byte opcode_from_bstring(bstring src)
     {
         return OP_MOV;
     }
+    else if (bstring_cmp(src, bstring_from_char("call")))
+    {
+        return OP_CALL;
+    }
+    else if (bstring_cmp(src, bstring_from_char("ret")))
+    {
+        return OP_RET;
+    }
 
     printf("Unrecognized opcode\n");
     exit(6);

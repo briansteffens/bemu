@@ -19,7 +19,9 @@ enum opcodes
     OP_POP,
     OP_JMP,
     OP_EXIT,
-    OP_MOV
+    OP_MOV,
+    OP_CALL,
+    OP_RET
 };
 
 enum sizes

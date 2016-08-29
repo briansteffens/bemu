@@ -1,10 +1,14 @@
 hi:
 	mov r0 [rsp+8]
-	pop rip
+	ret
 
 start:
 	push 123
-	push rip
+	call hi
 	pop r1
+
+	push 321
+	call hi
+	pop r2
 
 	exit

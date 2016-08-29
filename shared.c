@@ -47,9 +47,11 @@ int operands(byte opcode)
         case OP_PUSH:
         case OP_POP:
         case OP_JMP:
+        case OP_CALL:
             return 1;
 
         case OP_EXIT:
+        case OP_RET:
             return 0;
 
         default:
@@ -138,6 +140,12 @@ const char* opcode_to_string(byte opcode)
 
         case OP_MOV:
             return "mov";
+
+        case OP_CALL:
+            return "call";
+
+        case OP_RET:
+            return "ret";
 
         default:
             printf("Unrecognized opcode\n");

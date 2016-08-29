@@ -49,6 +49,53 @@ byte* resolve_operand(machine_state* state, operand* oper)
     return ret;
 }
 
+void push(machine_state* state, byte* data, byte size)
+{
+    state->registers[RSP] -= size;
+
+    memcpy(state->memory + state->registers[RSP], data, size);
+}
+
+void pop(machine_state* state, byte* target, byte size)
+{
+    memcpy(target, state->memory + state->registers[RSP], size);
+
+    state->registers[RSP] += size;
+}
+
+void execute_jmp(machine_state* state, instruction* inst)
+{
+    state->registers[RIP] = *(u64*)resolve_operand(state, &inst->operands[0]);
+}
+
+void execute_push(machine_state* state, instruction* inst)
+{
+    push(state, resolve_operand(state, &inst->operands[0]), inst->size);
+}
+
+void execute_pop(machine_state* state, instruction* inst)
+{
+    pop(state, resolve_operand(state, &inst->operands[0]), inst->size);
+}
+
+void execute_mov(machine_state* state, instruction* inst)
+{
+    memcpy(resolve_operand(state, &inst->operands[0]),
+           resolve_operand(state, &inst->operands[1]),
+           inst->size);
+}
+
+void execute_call(machine_state* state, instruction* inst)
+{
+    push(state, (byte*)&state->registers[RIP], B8);
+    execute_jmp(state, inst);
+}
+
+void execute_ret(machine_state* state, instruction* inst)
+{
+    pop(state, (byte*)&state->registers[RIP], B8);
+}
+
 bool execute(machine_state* state)
 {
     instruction inst;
@@ -62,34 +109,28 @@ bool execute(machine_state* state)
     switch (inst.opcode)
     {
         case OP_JMP:
-            state->registers[RIP] = *(u64*)resolve_operand(
-                    state,
-                    &inst.operands[0]);
-
+            execute_jmp(state, &inst);
             break;
 
         case OP_PUSH:
-            state->registers[RSP] -= inst.size;
-
-            memcpy(state->memory + state->registers[RSP],
-                   resolve_operand(state, &inst.operands[0]),
-                   inst.size);
-
+            execute_push(state, &inst);
             break;
 
         case OP_POP:
-            memcpy(resolve_operand(state, &inst.operands[0]),
-                   state->memory + state->registers[RSP],
-                   inst.size);
-
-            state->registers[RSP] += inst.size;
-
+            execute_pop(state, &inst);
             break;
 
         case OP_MOV:
-            memcpy(resolve_operand(state, &inst.operands[0]),
-                   resolve_operand(state, &inst.operands[1]),
-                   inst.size);
+            execute_mov(state, &inst);
+            break;
+
+        case OP_CALL:
+            execute_call(state, &inst);
+            break;
+
+        case OP_RET:
+            execute_ret(state, &inst);
+            break;
 
         case OP_EXIT:
             return false;
@@ -104,7 +145,9 @@ bool execute(machine_state* state)
 
 void print_debug(machine_state* state)
 {
-    printf("  R0: %llu\n", state->registers[R0]);
+    printf("  R0: %llu", state->registers[R0]);
+    printf("  R1: %llu", state->registers[R1]);
+    putchar('\n');
 }
 
 int main(int argc, char* argv[])
