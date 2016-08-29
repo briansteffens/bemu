@@ -13,8 +13,8 @@ typedef struct label
     unsigned address;
 } label;
 
-VECTOR_H(label);
-VECTOR_C(label);
+VECTOR_H(label)
+VECTOR_C(label)
 
 typedef struct jump
 {
@@ -22,32 +22,33 @@ typedef struct jump
     bstring label_name;
 } jump;
 
-VECTOR_H(jump);
-VECTOR_C(jump);
+VECTOR_H(jump)
+VECTOR_C(jump)
 
 byte opcode_from_bstring(bstring src)
 {
-    if      (bstring_cmp(src, bstring_from_char("push"))) { return OP_PUSH; }
-    else if (bstring_cmp(src, bstring_from_char("pop")))  { return OP_POP;  }
-    else if (bstring_cmp(src, bstring_from_char("jmp")))  { return OP_JMP;  }
-    else if (bstring_cmp(src, bstring_from_char("exit"))) { return OP_EXIT; }
-    else if (bstring_cmp(src, bstring_from_char("mov")))  { return OP_MOV;  }
-    else if (bstring_cmp(src, bstring_from_char("call"))) { return OP_CALL; }
-    else if (bstring_cmp(src, bstring_from_char("ret")))  { return OP_RET;  }
-    else if (bstring_cmp(src, bstring_from_char("add")))  { return OP_ADD;  }
-    else if (bstring_cmp(src, bstring_from_char("sub")))  { return OP_SUB;  }
-    else if (bstring_cmp(src, bstring_from_char("mul")))  { return OP_MUL;  }
-    else if (bstring_cmp(src, bstring_from_char("div")))  { return OP_DIV;  }
-    else if (bstring_cmp(src, bstring_from_char("mod")))  { return OP_MOD;  }
-    else if (bstring_cmp(src, bstring_from_char("inc")))  { return OP_INC;  }
-    else if (bstring_cmp(src, bstring_from_char("dec")))  { return OP_DEC;  }
-    else if (bstring_cmp(src, bstring_from_char("cmp")))  { return OP_CMP;  }
-    else if (bstring_cmp(src, bstring_from_char("je")))   { return OP_JE;   }
-    else if (bstring_cmp(src, bstring_from_char("jne")))  { return OP_JNE;  }
-    else if (bstring_cmp(src, bstring_from_char("jl")))   { return OP_JL;   }
-    else if (bstring_cmp(src, bstring_from_char("jle")))  { return OP_JLE;  }
-    else if (bstring_cmp(src, bstring_from_char("jg")))   { return OP_JG;   }
-    else if (bstring_cmp(src, bstring_from_char("jge")))  { return OP_JGE;  }
+    if      (bstring_cmp(src, bstring_from_char("push")))  { return OP_PUSH;  }
+    else if (bstring_cmp(src, bstring_from_char("pop")))   { return OP_POP;   }
+    else if (bstring_cmp(src, bstring_from_char("jmp")))   { return OP_JMP;   }
+    else if (bstring_cmp(src, bstring_from_char("exit")))  { return OP_EXIT;  }
+    else if (bstring_cmp(src, bstring_from_char("mov")))   { return OP_MOV;   }
+    else if (bstring_cmp(src, bstring_from_char("call")))  { return OP_CALL;  }
+    else if (bstring_cmp(src, bstring_from_char("ret")))   { return OP_RET;   }
+    else if (bstring_cmp(src, bstring_from_char("add")))   { return OP_ADD;   }
+    else if (bstring_cmp(src, bstring_from_char("sub")))   { return OP_SUB;   }
+    else if (bstring_cmp(src, bstring_from_char("mul")))   { return OP_MUL;   }
+    else if (bstring_cmp(src, bstring_from_char("div")))   { return OP_DIV;   }
+    else if (bstring_cmp(src, bstring_from_char("mod")))   { return OP_MOD;   }
+    else if (bstring_cmp(src, bstring_from_char("inc")))   { return OP_INC;   }
+    else if (bstring_cmp(src, bstring_from_char("dec")))   { return OP_DEC;   }
+    else if (bstring_cmp(src, bstring_from_char("cmp")))   { return OP_CMP;   }
+    else if (bstring_cmp(src, bstring_from_char("je")))    { return OP_JE;    }
+    else if (bstring_cmp(src, bstring_from_char("jne")))   { return OP_JNE;   }
+    else if (bstring_cmp(src, bstring_from_char("jl")))    { return OP_JL;    }
+    else if (bstring_cmp(src, bstring_from_char("jle")))   { return OP_JLE;   }
+    else if (bstring_cmp(src, bstring_from_char("jg")))    { return OP_JG;    }
+    else if (bstring_cmp(src, bstring_from_char("jge")))   { return OP_JGE;   }
+    else if (bstring_cmp(src, bstring_from_char("print"))) { return OP_PRINT; }
 
     printf("Unrecognized opcode\n");
     exit(6);
@@ -55,13 +56,14 @@ byte opcode_from_bstring(bstring src)
 
 byte register_from_bstring(bstring src)
 {
-    if      (bstring_cmp(src, bstring_from_char("r0")))  { return R0;  }
-    else if (bstring_cmp(src, bstring_from_char("r1")))  { return R1;  }
-    else if (bstring_cmp(src, bstring_from_char("r2")))  { return R2;  }
-    else if (bstring_cmp(src, bstring_from_char("r3")))  { return R3;  }
-    else if (bstring_cmp(src, bstring_from_char("r4")))  { return R4;  }
-    else if (bstring_cmp(src, bstring_from_char("rip"))) { return RIP; }
-    else if (bstring_cmp(src, bstring_from_char("rsp"))) { return RSP; }
+    if      (bstring_cmp(src, bstring_from_char("r0")))   { return R0;  }
+    else if (bstring_cmp(src, bstring_from_char("r1")))   { return R1;  }
+    else if (bstring_cmp(src, bstring_from_char("r2")))   { return R2;  }
+    else if (bstring_cmp(src, bstring_from_char("r3")))   { return R3;  }
+    else if (bstring_cmp(src, bstring_from_char("r4")))   { return R4;  }
+    else if (bstring_cmp(src, bstring_from_char("rip")))  { return RIP; }
+    else if (bstring_cmp(src, bstring_from_char("rsp")))  { return RSP; }
+    else if (bstring_cmp(src, bstring_from_char("rmem"))) { return RMEM; }
     else
     {
         printf("Unrecognized register.\n");

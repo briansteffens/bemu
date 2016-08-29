@@ -224,6 +224,9 @@ void print_debug(machine_state* state)
 {
     printf("  r0: %llu", state->registers[R0]);
     printf("  r1: %llu", state->registers[R1]);
+    printf("  r2: %llu", state->registers[R2]);
+    printf("  r3: %llu", state->registers[R3]);
+    printf("  r4: %llu", state->registers[R4]);
     printf("  rflag: %lli", state->registers[RFLAG]);
     putchar('\n');
 }
@@ -272,6 +275,9 @@ int main(int argc, char* argv[])
         state.registers[i] = 0;
     }
 
+    // Align rmem on 8-byte boundary after image
+    state.registers[RMEM] = bytes_count + 8 - bytes_count % 8;
+
     state.registers[RIP] =
         IMG_HDR_LEN + *(u64 *)(state.memory + IMG_HDR_ENTRY_POINT);
     state.registers[RSP] = MEMORY_SIZE;
@@ -281,6 +287,18 @@ int main(int argc, char* argv[])
         if (state.debug)
         {
             print_debug(&state);
+
+            // Debug prompt
+            char* input = NULL;
+            size_t len;
+            int read = getline(&input, &len, stdin);
+
+            if (read != -1)
+            {
+                // handle command
+            }
+
+            free(input);
         }
     }
 

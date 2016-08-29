@@ -40,6 +40,7 @@ int operands(byte opcode)
         case OP_JG:
         case OP_JLE:
         case OP_JGE:
+        case OP_PRINT:
             return 1;
 
         case OP_EXIT:
@@ -101,44 +102,92 @@ const char* operand_mode_to_string(byte mode)
     }
 }
 
+const char* register_to_string(byte r)
+{
+    switch (r)
+    {
+        case R0:    return "r0";
+        case R1:    return "r1";
+        case R2:    return "r2";
+        case R3:    return "r3";
+        case R4:    return "r4";
+        case RIP:   return "rip";
+        case RSP:   return "rsp";
+        case RFLAG: return "rflag";
+        case RMEM:  return "rmem";
+
+        default:
+            printf("Unrecognized register\n");
+            exit(13);
+    }
+}
+
 void operand_to_string(operand* oper, char* out)
 {
-    snprintf
-    (
-        out,
-        DEBUG_STR_LEN,
-        "%s %s %llu",
-        operand_type_to_string(oper->type),
-        operand_mode_to_string(oper->mode),
-        oper->data
-    );
+    char core[32];
+
+    switch (oper->type)
+    {
+        case IMMEDIATE:
+            snprintf(core, 32, "%llu", oper->data);
+            break;
+
+        case REGISTER:
+            snprintf(core, 32, "%s",
+                     register_to_string(operand_unpack_register(oper)));
+            break;
+
+        default:
+            printf("Unrecognized operand type\n");
+            exit(20);
+    }
+
+    if (oper->mode == ADDRESS)
+    {
+        int offset = operand_unpack_offset(oper);
+
+        if (offset == 0)
+        {
+            snprintf(out, DEBUG_STR_LEN, "[%s]", core);
+        }
+        else
+        {
+            char sign = offset > 0 ? '+' : '-';
+            snprintf(out, DEBUG_STR_LEN, "[%s%c%d]", core, sign, offset);
+        }
+    }
+    else
+    {
+        snprintf(out, DEBUG_STR_LEN, "%s", core);
+    }
 }
 
 const char* opcode_to_string(byte opcode)
 {
     switch (opcode)
     {
-        case OP_PUSH: return "push";
-        case OP_POP:  return "pop";
-        case OP_JMP:  return "jmp";
-        case OP_EXIT: return "exit";
-        case OP_MOV:  return "mov";
-        case OP_CALL: return "call";
-        case OP_RET:  return "ret";
-        case OP_ADD:  return "add";
-        case OP_SUB:  return "sub";
-        case OP_MUL:  return "mul";
-        case OP_DIV:  return "div";
-        case OP_MOD:  return "mod";
-        case OP_INC:  return "inc";
-        case OP_DEC:  return "dec";
-        case OP_CMP:  return "cmp";
-        case OP_JE:   return "je";
-        case OP_JNE:  return "jne";
-        case OP_JL:   return "jl";
-        case OP_JG:   return "jg";
-        case OP_JLE:  return "jle";
-        case OP_JGE:  return "jge";
+        case OP_PUSH:   return "push";
+        case OP_POP:    return "pop";
+        case OP_JMP:    return "jmp";
+        case OP_EXIT:   return "exit";
+        case OP_MOV:    return "mov";
+        case OP_CALL:   return "call";
+        case OP_RET:    return "ret";
+        case OP_ADD:    return "add";
+        case OP_SUB:    return "sub";
+        case OP_MUL:    return "mul";
+        case OP_DIV:    return "div";
+        case OP_MOD:    return "mod";
+        case OP_INC:    return "inc";
+        case OP_DEC:    return "dec";
+        case OP_CMP:    return "cmp";
+        case OP_JE:     return "je";
+        case OP_JNE:    return "jne";
+        case OP_JL:     return "jl";
+        case OP_JG:     return "jg";
+        case OP_JLE:    return "jle";
+        case OP_JGE:    return "jge";
+        case OP_PRINT:  return "print";
 
         default:
             printf("Unrecognized opcode\n");
@@ -170,12 +219,12 @@ const char* size_to_string(byte size)
 
 void instruction_print(instruction* inst)
 {
-    printf
-    (
-        "%s %s",
-        opcode_to_string(inst->opcode),
-        size_to_string(inst->size)
-    );
+    printf("%s", opcode_to_string(inst->opcode));
+
+    if (inst->size != B8)
+    {
+        printf(" %s", size_to_string(inst->size));
+    }
 
     int operand_count = operands(inst->opcode);
     char buffer[DEBUG_STR_LEN];
@@ -246,7 +295,7 @@ byte operand_unpack_register(operand* oper)
     return *(byte*)(&oper->data);
 }
 
-byte operand_unpack_offset(operand* oper)
+int operand_unpack_offset(operand* oper)
 {
     return oper->data >> 32;
 }
