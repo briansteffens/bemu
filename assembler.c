@@ -248,62 +248,27 @@ bool split(bstring* in, const char* separators, bstring_array* out)
 
 byte opcode_from_bstring(bstring src)
 {
-    if (bstring_cmp(src, bstring_from_char("push")))
-    {
-        return OP_PUSH;
-    }
-    else if (bstring_cmp(src, bstring_from_char("pop")))
-    {
-        return OP_POP;
-    }
-    else if (bstring_cmp(src, bstring_from_char("jmp")))
-    {
-        return OP_JMP;
-    }
-    else if (bstring_cmp(src, bstring_from_char("exit")))
-    {
-        return OP_EXIT;
-    }
-    else if (bstring_cmp(src, bstring_from_char("mov")))
-    {
-        return OP_MOV;
-    }
-    else if (bstring_cmp(src, bstring_from_char("call")))
-    {
-        return OP_CALL;
-    }
-    else if (bstring_cmp(src, bstring_from_char("ret")))
-    {
-        return OP_RET;
-    }
-    else if (bstring_cmp(src, bstring_from_char("add")))
-    {
-        return OP_ADD;
-    }
-    else if (bstring_cmp(src, bstring_from_char("sub")))
-    {
-        return OP_SUB;
-    }
-    else if (bstring_cmp(src, bstring_from_char("mul")))
-    {
-        return OP_MUL;
-    }
-    else if (bstring_cmp(src, bstring_from_char("div")))
-    {
-        return OP_DIV;
-    }
-    else if (bstring_cmp(src, bstring_from_char("mod")))
-    {
-        return OP_MOD;
-    }
-    else if (bstring_cmp(src, bstring_from_char("inc")))
-    {
-        return OP_INC;
-    }
-    else if (bstring_cmp(src, bstring_from_char("dec")))
-    {
-        return OP_DEC;
-    }
+    if      (bstring_cmp(src, bstring_from_char("push"))) { return OP_PUSH; }
+    else if (bstring_cmp(src, bstring_from_char("pop")))  { return OP_POP;  }
+    else if (bstring_cmp(src, bstring_from_char("jmp")))  { return OP_JMP;  }
+    else if (bstring_cmp(src, bstring_from_char("exit"))) { return OP_EXIT; }
+    else if (bstring_cmp(src, bstring_from_char("mov")))  { return OP_MOV;  }
+    else if (bstring_cmp(src, bstring_from_char("call"))) { return OP_CALL; }
+    else if (bstring_cmp(src, bstring_from_char("ret")))  { return OP_RET;  }
+    else if (bstring_cmp(src, bstring_from_char("add")))  { return OP_ADD;  }
+    else if (bstring_cmp(src, bstring_from_char("sub")))  { return OP_SUB;  }
+    else if (bstring_cmp(src, bstring_from_char("mul")))  { return OP_MUL;  }
+    else if (bstring_cmp(src, bstring_from_char("div")))  { return OP_DIV;  }
+    else if (bstring_cmp(src, bstring_from_char("mod")))  { return OP_MOD;  }
+    else if (bstring_cmp(src, bstring_from_char("inc")))  { return OP_INC;  }
+    else if (bstring_cmp(src, bstring_from_char("dec")))  { return OP_DEC;  }
+    else if (bstring_cmp(src, bstring_from_char("cmp")))  { return OP_CMP;  }
+    else if (bstring_cmp(src, bstring_from_char("je")))   { return OP_JE;   }
+    else if (bstring_cmp(src, bstring_from_char("jne")))  { return OP_JNE;  }
+    else if (bstring_cmp(src, bstring_from_char("jl")))   { return OP_JL;   }
+    else if (bstring_cmp(src, bstring_from_char("jle")))  { return OP_JLE;  }
+    else if (bstring_cmp(src, bstring_from_char("jg")))   { return OP_JG;   }
+    else if (bstring_cmp(src, bstring_from_char("jge")))  { return OP_JGE;  }
 
     printf("Unrecognized opcode\n");
     exit(6);
@@ -412,6 +377,13 @@ bool is_label(bstring_array* parts)
             parts->items[0].data[parts->items[0].len - 1] == ':');
 }
 
+bool is_jump(byte opcode)
+{
+    return opcode == OP_JMP || opcode == OP_JE || opcode == OP_JNE ||
+           opcode == OP_JL || opcode == OP_JLE ||
+           opcode == OP_JG || opcode == OP_JGE;
+}
+
 void parse_instructions(
         bstring_array* lines,
         instruction_array* instructions,
@@ -451,7 +423,7 @@ void parse_instructions(
         inst->size = B8;
 
         // Jumps need their labels resolved in a subsequent pass
-        if (inst->opcode == OP_JMP)
+        if (is_jump(inst->opcode))
         {
             jump* jmp = jump_array_add(jumps);
 

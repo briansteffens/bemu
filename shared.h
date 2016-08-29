@@ -8,9 +8,10 @@
 #define IMG_HDR_CODE_BYTES 0
 #define IMG_HDR_ENTRY_POINT 8
 
-#define REGISTER_COUNT 7
+#define REGISTER_COUNT 8
 
 typedef unsigned long long u64;
+typedef long long i64;
 typedef unsigned char byte;
 
 enum opcodes
@@ -28,7 +29,14 @@ enum opcodes
     OP_DIV,
     OP_MOD,
     OP_INC,
-    OP_DEC
+    OP_DEC,
+    OP_CMP,
+    OP_JE,
+    OP_JNE,
+    OP_JL,
+    OP_JG,
+    OP_JLE,
+    OP_JGE
 };
 
 enum sizes
@@ -47,7 +55,8 @@ enum registers
     R3,
     R4,
     RIP,
-    RSP
+    RSP,
+    RFLAG
 };
 
 enum operand_types

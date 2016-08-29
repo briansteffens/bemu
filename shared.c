@@ -47,6 +47,7 @@ int operands(byte opcode)
         case OP_MUL:
         case OP_DIV:
         case OP_MOD:
+        case OP_CMP:
             return 2;
 
         case OP_PUSH:
@@ -55,6 +56,12 @@ int operands(byte opcode)
         case OP_CALL:
         case OP_INC:
         case OP_DEC:
+        case OP_JE:
+        case OP_JNE:
+        case OP_JL:
+        case OP_JG:
+        case OP_JLE:
+        case OP_JGE:
             return 1;
 
         case OP_EXIT:
@@ -147,6 +154,13 @@ const char* opcode_to_string(byte opcode)
         case OP_MOD:  return "mod";
         case OP_INC:  return "inc";
         case OP_DEC:  return "dec";
+        case OP_CMP:  return "cmp";
+        case OP_JE:   return "je";
+        case OP_JNE:  return "jne";
+        case OP_JL:   return "jl";
+        case OP_JG:   return "jg";
+        case OP_JLE:  return "jle";
+        case OP_JGE:  return "jge";
 
         default:
             printf("Unrecognized opcode\n");

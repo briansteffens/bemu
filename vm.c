@@ -63,9 +63,14 @@ void pop(machine_state* state, byte* target, byte size)
     state->registers[RSP] += size;
 }
 
-void execute_jmp(machine_state* state, instruction* inst)
+void jump(machine_state* state, instruction* inst)
 {
     state->registers[RIP] = *(u64*)resolve_operand(state, &inst->operands[0]);
+}
+
+void execute_jmp(machine_state* state, instruction* inst)
+{
+    jump(state, inst);
 }
 
 void execute_push(machine_state* state, instruction* inst)
@@ -108,35 +113,35 @@ void basic_math(
     memcpy(target, &result, inst->size);
 }
 
-u64 handler_add(u64 left, u64 right) { return left + right; }
-u64 handler_sub(u64 left, u64 right) { return left - right; }
-u64 handler_mul(u64 left, u64 right) { return left * right; }
-u64 handler_div(u64 left, u64 right) { return left / right; }
-u64 handler_mod(u64 left, u64 right) { return left % right; }
+u64 math_handler_add(u64 left, u64 right) { return left + right; }
+u64 math_handler_sub(u64 left, u64 right) { return left - right; }
+u64 math_handler_mul(u64 left, u64 right) { return left * right; }
+u64 math_handler_div(u64 left, u64 right) { return left / right; }
+u64 math_handler_mod(u64 left, u64 right) { return left % right; }
 
 void execute_add(machine_state* state, instruction* inst)
 {
-    basic_math(state, inst, handler_add);
+    basic_math(state, inst, math_handler_add);
 }
 
 void execute_sub(machine_state* state, instruction* inst)
 {
-    basic_math(state, inst, handler_sub);
+    basic_math(state, inst, math_handler_sub);
 }
 
 void execute_mul(machine_state* state, instruction* inst)
 {
-    basic_math(state, inst, handler_mul);
+    basic_math(state, inst, math_handler_mul);
 }
 
 void execute_div(machine_state* state, instruction* inst)
 {
-    basic_math(state, inst, handler_div);
+    basic_math(state, inst, math_handler_div);
 }
 
 void execute_mod(machine_state* state, instruction* inst)
 {
-    basic_math(state, inst, handler_mod);
+    basic_math(state, inst, math_handler_mod);
 }
 
 void execute_inc(machine_state* state, instruction* inst)
@@ -151,6 +156,62 @@ void execute_dec(machine_state* state, instruction* inst)
     byte* target = resolve_operand(state, &inst->operands[0]);
     u64 result = --*(u64*)target;
     memcpy(target, &result, inst->size);
+}
+
+void execute_cmp(machine_state* state, instruction* inst)
+{
+    u64 left = *(u64*)resolve_operand(state, &inst->operands[0]);
+    u64 right = *(u64*)resolve_operand(state, &inst->operands[1]);
+    u64 result = left - right;
+    memcpy(&state->registers[RFLAG], &result, inst->size);
+}
+
+void execute_je(machine_state* state, instruction* inst)
+{
+    if ((i64)state->registers[RFLAG] == 0)
+    {
+        jump(state, inst);
+    }
+}
+
+void execute_jne(machine_state* state, instruction* inst)
+{
+    if ((i64)state->registers[RFLAG] != 0)
+    {
+        jump(state, inst);
+    }
+}
+
+void execute_jl(machine_state* state, instruction* inst)
+{
+    if ((i64)state->registers[RFLAG] < 0)
+    {
+        jump(state, inst);
+    }
+}
+
+void execute_jle(machine_state* state, instruction* inst)
+{
+    if ((i64)state->registers[RFLAG] <= 0)
+    {
+        jump(state, inst);
+    }
+}
+
+void execute_jg(machine_state* state, instruction* inst)
+{
+    if ((i64)state->registers[RFLAG] > 0)
+    {
+        jump(state, inst);
+    }
+}
+
+void execute_jge(machine_state* state, instruction* inst)
+{
+    if ((i64)state->registers[RFLAG] >= 0)
+    {
+        jump(state, inst);
+    }
 }
 
 bool execute(machine_state* state)
@@ -180,6 +241,13 @@ bool execute(machine_state* state)
         case OP_MOD:  func = execute_mod;  break;
         case OP_INC:  func = execute_inc;  break;
         case OP_DEC:  func = execute_dec;  break;
+        case OP_CMP:  func = execute_cmp;  break;
+        case OP_JE:   func = execute_je;   break;
+        case OP_JNE:  func = execute_jne;  break;
+        case OP_JG:   func = execute_jg;   break;
+        case OP_JGE:  func = execute_jge;  break;
+        case OP_JL:   func = execute_jl;   break;
+        case OP_JLE:  func = execute_jle;  break;
 
         case OP_EXIT:
             return false;
@@ -198,6 +266,7 @@ void print_debug(machine_state* state)
 {
     printf("  r0: %llu", state->registers[R0]);
     printf("  r1: %llu", state->registers[R1]);
+    printf("  rflag: %lli", state->registers[RFLAG]);
     putchar('\n');
 }
 
