@@ -96,6 +96,63 @@ void execute_ret(machine_state* state, instruction* inst)
     pop(state, (byte*)&state->registers[RIP], B8);
 }
 
+void basic_math(
+        machine_state* state,
+        instruction* inst,
+        u64 (*handler)(u64, u64))
+{
+    byte* target = resolve_operand(state, &inst->operands[0]);
+    u64 left = *(u64*)target;
+    u64 right = *(u64*)resolve_operand(state, &inst->operands[1]);
+    u64 result = handler(left, right);
+    memcpy(target, &result, inst->size);
+}
+
+u64 handler_add(u64 left, u64 right) { return left + right; }
+u64 handler_sub(u64 left, u64 right) { return left - right; }
+u64 handler_mul(u64 left, u64 right) { return left * right; }
+u64 handler_div(u64 left, u64 right) { return left / right; }
+u64 handler_mod(u64 left, u64 right) { return left % right; }
+
+void execute_add(machine_state* state, instruction* inst)
+{
+    basic_math(state, inst, handler_add);
+}
+
+void execute_sub(machine_state* state, instruction* inst)
+{
+    basic_math(state, inst, handler_sub);
+}
+
+void execute_mul(machine_state* state, instruction* inst)
+{
+    basic_math(state, inst, handler_mul);
+}
+
+void execute_div(machine_state* state, instruction* inst)
+{
+    basic_math(state, inst, handler_div);
+}
+
+void execute_mod(machine_state* state, instruction* inst)
+{
+    basic_math(state, inst, handler_mod);
+}
+
+void execute_inc(machine_state* state, instruction* inst)
+{
+    byte* target = resolve_operand(state, &inst->operands[0]);
+    u64 result = ++*(u64*)target;
+    memcpy(target, &result, inst->size);
+}
+
+void execute_dec(machine_state* state, instruction* inst)
+{
+    byte* target = resolve_operand(state, &inst->operands[0]);
+    u64 result = --*(u64*)target;
+    memcpy(target, &result, inst->size);
+}
+
 bool execute(machine_state* state)
 {
     instruction inst;
@@ -106,31 +163,23 @@ bool execute(machine_state* state)
 
     instruction_print(&inst);
 
+    void (*func)(machine_state* state, instruction* inst);
+
     switch (inst.opcode)
     {
-        case OP_JMP:
-            execute_jmp(state, &inst);
-            break;
-
-        case OP_PUSH:
-            execute_push(state, &inst);
-            break;
-
-        case OP_POP:
-            execute_pop(state, &inst);
-            break;
-
-        case OP_MOV:
-            execute_mov(state, &inst);
-            break;
-
-        case OP_CALL:
-            execute_call(state, &inst);
-            break;
-
-        case OP_RET:
-            execute_ret(state, &inst);
-            break;
+        case OP_JMP:  func = execute_jmp;  break;
+        case OP_PUSH: func = execute_push; break;
+        case OP_POP:  func = execute_pop;  break;
+        case OP_MOV:  func = execute_mov;  break;
+        case OP_CALL: func = execute_call; break;
+        case OP_RET:  func = execute_ret;  break;
+        case OP_ADD:  func = execute_add;  break;
+        case OP_SUB:  func = execute_sub;  break;
+        case OP_MUL:  func = execute_mul;  break;
+        case OP_DIV:  func = execute_div;  break;
+        case OP_MOD:  func = execute_mod;  break;
+        case OP_INC:  func = execute_inc;  break;
+        case OP_DEC:  func = execute_dec;  break;
 
         case OP_EXIT:
             return false;
@@ -140,13 +189,15 @@ bool execute(machine_state* state)
             exit(3);
     }
 
+    func(state, &inst);
+
     return true;
 }
 
 void print_debug(machine_state* state)
 {
-    printf("  R0: %llu", state->registers[R0]);
-    printf("  R1: %llu", state->registers[R1]);
+    printf("  r0: %llu", state->registers[R0]);
+    printf("  r1: %llu", state->registers[R1]);
     putchar('\n');
 }
 

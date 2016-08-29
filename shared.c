@@ -42,12 +42,19 @@ int operands(byte opcode)
     switch (opcode)
     {
         case OP_MOV:
+        case OP_ADD:
+        case OP_SUB:
+        case OP_MUL:
+        case OP_DIV:
+        case OP_MOD:
             return 2;
 
         case OP_PUSH:
         case OP_POP:
         case OP_JMP:
         case OP_CALL:
+        case OP_INC:
+        case OP_DEC:
             return 1;
 
         case OP_EXIT:
@@ -126,26 +133,20 @@ const char* opcode_to_string(byte opcode)
 {
     switch (opcode)
     {
-        case OP_PUSH:
-            return "push";
-
-        case OP_POP:
-            return "pop";
-
-        case OP_JMP:
-            return "jmp";
-
-        case OP_EXIT:
-            return "exit";
-
-        case OP_MOV:
-            return "mov";
-
-        case OP_CALL:
-            return "call";
-
-        case OP_RET:
-            return "ret";
+        case OP_PUSH: return "push";
+        case OP_POP:  return "pop";
+        case OP_JMP:  return "jmp";
+        case OP_EXIT: return "exit";
+        case OP_MOV:  return "mov";
+        case OP_CALL: return "call";
+        case OP_RET:  return "ret";
+        case OP_ADD:  return "add";
+        case OP_SUB:  return "sub";
+        case OP_MUL:  return "mul";
+        case OP_DIV:  return "div";
+        case OP_MOD:  return "mod";
+        case OP_INC:  return "inc";
+        case OP_DEC:  return "dec";
 
         default:
             printf("Unrecognized opcode\n");

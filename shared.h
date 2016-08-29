@@ -21,7 +21,14 @@ enum opcodes
     OP_EXIT,
     OP_MOV,
     OP_CALL,
-    OP_RET
+    OP_RET,
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV,
+    OP_MOD,
+    OP_INC,
+    OP_DEC
 };
 
 enum sizes

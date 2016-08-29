@@ -276,6 +276,34 @@ byte opcode_from_bstring(bstring src)
     {
         return OP_RET;
     }
+    else if (bstring_cmp(src, bstring_from_char("add")))
+    {
+        return OP_ADD;
+    }
+    else if (bstring_cmp(src, bstring_from_char("sub")))
+    {
+        return OP_SUB;
+    }
+    else if (bstring_cmp(src, bstring_from_char("mul")))
+    {
+        return OP_MUL;
+    }
+    else if (bstring_cmp(src, bstring_from_char("div")))
+    {
+        return OP_DIV;
+    }
+    else if (bstring_cmp(src, bstring_from_char("mod")))
+    {
+        return OP_MOD;
+    }
+    else if (bstring_cmp(src, bstring_from_char("inc")))
+    {
+        return OP_INC;
+    }
+    else if (bstring_cmp(src, bstring_from_char("dec")))
+    {
+        return OP_DEC;
+    }
 
     printf("Unrecognized opcode\n");
     exit(6);

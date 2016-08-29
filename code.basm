@@ -1,14 +1,12 @@
-hi:
-	mov r0 [rsp+8]
+factorial:
+	mov r1 [rsp+8]
+
 	ret
 
 start:
-	push 123
-	call hi
+	push 5
+	call factorial
+	pop r0
 	pop r1
-
-	push 321
-	call hi
-	pop r2
 
 	exit
