@@ -19,7 +19,6 @@ factorial_base_case:
 start:
 	push 5
 	call factorial
-	pop r1
-	pop r2
+    add rsp 8
 
 	exit
