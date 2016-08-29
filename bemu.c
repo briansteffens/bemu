@@ -2,31 +2,9 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#include "shared.h"
+#include "bemu.h"
 
-void instruction_array_new(instruction_array* target)
-{
-    target->allocated = 1;
-    target->len = 0;
-    target->items = malloc(sizeof(instruction) * target->allocated);
-}
-
-instruction* instruction_array_add(instruction_array* target)
-{
-    target->len++;
-
-    if (target->len > target->allocated)
-    {
-        target->allocated *= 2;
-        target->items = realloc
-        (
-            target->items,
-            sizeof(instruction) * target->allocated
-        );
-    }
-
-    return &target->items[target->len - 1];
-}
+VECTOR_C(instruction);
 
 int operand_decode(byte* in, operand* oper)
 {
@@ -211,7 +189,7 @@ void instruction_print(instruction* inst)
     putchar('\n');
 }
 
-void instruction_array_print(instruction_array* target)
+void vec_instruction_print(vec_instruction* target)
 {
     for (int i = 0; i < target->len; i++)
     {
@@ -219,9 +197,9 @@ void instruction_array_print(instruction_array* target)
     }
 }
 
-byte* read_file(const char* filename, int* out_bytes_read)
+byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read)
 {
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(fn, "r");
 
     if (!file)
     {
@@ -230,15 +208,19 @@ byte* read_file(const char* filename, int* out_bytes_read)
     }
 
     struct stat file_stat;
+
     if (fstat(fileno(file), &file_stat) < 0)
     {
         printf("Failed to stat file.\n");
         return false;
     }
 
-    byte* ret = malloc(sizeof(byte) * file_stat.st_size);
+    if (out_bytes == NULL)
+    {
+        out_bytes = malloc(sizeof(byte) * file_stat.st_size);
+    }
 
-    if (!fread(ret, file_stat.st_size, 1, file))
+    if (!fread(out_bytes, file_stat.st_size, 1, file))
     {
         printf("Failed to read file contents.\n");
         return false;
@@ -248,7 +230,7 @@ byte* read_file(const char* filename, int* out_bytes_read)
 
     *out_bytes_read = file_stat.st_size;
 
-    return ret;
+    return out_bytes;
 }
 
 void encode_u64(u64 in, byte* out)

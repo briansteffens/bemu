@@ -17,7 +17,7 @@ factorial_base_case:
     ret
 
 start:
-    push 5
+    push 15
     call factorial
     add rsp 8
 

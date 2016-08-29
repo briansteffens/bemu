@@ -3,7 +3,7 @@
 #include <malloc.h>
 #include <string.h>
 
-#include "shared.h"
+#include "bemu.h"
 
 #define MEMORY_SIZE 32 * 1024 * 1024
 
@@ -11,6 +11,7 @@ typedef struct
 {
     u64 registers[REGISTER_COUNT];
     byte* memory;
+    bool debug;
 } machine_state;
 
 byte* resolve_operand(machine_state* state, operand* oper)
@@ -65,7 +66,8 @@ void pop(machine_state* state, byte* target, byte size)
 
 void jump(machine_state* state, instruction* inst)
 {
-    state->registers[RIP] = *(u64*)resolve_operand(state, &inst->operands[0]);
+    state->registers[RIP] =
+        IMG_HDR_LEN + *(u64*)resolve_operand(state, &inst->operands[0]);
 }
 
 void execute_jmp(machine_state* state, instruction* inst)
@@ -113,36 +115,21 @@ void basic_math(
     memcpy(target, &result, inst->size);
 }
 
-u64 math_handler_add(u64 left, u64 right) { return left + right; }
-u64 math_handler_sub(u64 left, u64 right) { return left - right; }
-u64 math_handler_mul(u64 left, u64 right) { return left * right; }
-u64 math_handler_div(u64 left, u64 right) { return left / right; }
-u64 math_handler_mod(u64 left, u64 right) { return left % right; }
+#define math_handler(name, op)                                                \
+    u64 math_handler_##name(u64 left, u64 right)                              \
+    {                                                                         \
+        return left op right;                                                 \
+    }                                                                         \
+    void execute_##name(machine_state* state, instruction* inst)              \
+    {                                                                         \
+        basic_math(state, inst, math_handler_##name);                         \
+    }                                                                         \
 
-void execute_add(machine_state* state, instruction* inst)
-{
-    basic_math(state, inst, math_handler_add);
-}
-
-void execute_sub(machine_state* state, instruction* inst)
-{
-    basic_math(state, inst, math_handler_sub);
-}
-
-void execute_mul(machine_state* state, instruction* inst)
-{
-    basic_math(state, inst, math_handler_mul);
-}
-
-void execute_div(machine_state* state, instruction* inst)
-{
-    basic_math(state, inst, math_handler_div);
-}
-
-void execute_mod(machine_state* state, instruction* inst)
-{
-    basic_math(state, inst, math_handler_mod);
-}
+math_handler(add, +)
+math_handler(sub, -)
+math_handler(mul, *)
+math_handler(div, /)
+math_handler(mod, %)
 
 void execute_inc(machine_state* state, instruction* inst)
 {
@@ -166,53 +153,21 @@ void execute_cmp(machine_state* state, instruction* inst)
     memcpy(&state->registers[RFLAG], &result, inst->size);
 }
 
-void execute_je(machine_state* state, instruction* inst)
-{
-    if ((i64)state->registers[RFLAG] == 0)
-    {
-        jump(state, inst);
+#define conditional_handler(name, cmp)                                        \
+    void execute_##name(machine_state* state, instruction* inst)              \
+    {                                                                         \
+        if ((i64)state->registers[RFLAG] cmp 0)                               \
+        {                                                                     \
+            jump(state, inst);                                                \
+        }                                                                     \
     }
-}
 
-void execute_jne(machine_state* state, instruction* inst)
-{
-    if ((i64)state->registers[RFLAG] != 0)
-    {
-        jump(state, inst);
-    }
-}
-
-void execute_jl(machine_state* state, instruction* inst)
-{
-    if ((i64)state->registers[RFLAG] < 0)
-    {
-        jump(state, inst);
-    }
-}
-
-void execute_jle(machine_state* state, instruction* inst)
-{
-    if ((i64)state->registers[RFLAG] <= 0)
-    {
-        jump(state, inst);
-    }
-}
-
-void execute_jg(machine_state* state, instruction* inst)
-{
-    if ((i64)state->registers[RFLAG] > 0)
-    {
-        jump(state, inst);
-    }
-}
-
-void execute_jge(machine_state* state, instruction* inst)
-{
-    if ((i64)state->registers[RFLAG] >= 0)
-    {
-        jump(state, inst);
-    }
-}
+conditional_handler(je,  ==)
+conditional_handler(jne, !=)
+conditional_handler(jl,  < )
+conditional_handler(jle, <=)
+conditional_handler(jg,  > )
+conditional_handler(jge, >=)
 
 bool execute(machine_state* state)
 {
@@ -222,7 +177,10 @@ bool execute(machine_state* state)
             state->memory + state->registers[RIP],
             &inst);
 
-    instruction_print(&inst);
+    if (state->debug)
+    {
+        instruction_print(&inst);
+    }
 
     void (*func)(machine_state* state, instruction* inst);
 
@@ -270,20 +228,43 @@ void print_debug(machine_state* state)
     putchar('\n');
 }
 
+int print_usage()
+{
+    printf("Usage: bvm <binary_file> [--debug]\n");
+    return 1;
+}
+
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
+    if (argc < 2)
     {
-        printf("Usage: bvm <binary_file>\n");
-        return 1;
+        return print_usage();
     }
 
-    int bytes_count;
-    byte* bytes = read_file(argv[1], &bytes_count);
-
-    u64 code_bytes = *(u64 *)(bytes + IMG_HDR_CODE_BYTES);
-
     machine_state state;
+
+    state.debug = false;
+    char* filename = NULL;
+
+    for (int i = 1; i < argc; i++)
+    {
+        if (strncmp(argv[i], "--debug", 255) == 0)
+        {
+            state.debug = true;
+            continue;
+        }
+
+        if (filename != NULL)
+        {
+            return print_usage();
+        }
+
+        filename = argv[i];
+    }
+
+    state.memory = malloc(sizeof(byte) * MEMORY_SIZE);
+    int bytes_count;
+    read_file(filename, state.memory, &bytes_count);
 
     // Clear registers
     for (int i = 0; i < REGISTER_COUNT; i++)
@@ -291,23 +272,16 @@ int main(int argc, char* argv[])
         state.registers[i] = 0;
     }
 
-    state.registers[RIP] = *(u64 *)(bytes + IMG_HDR_ENTRY_POINT);
+    state.registers[RIP] =
+        IMG_HDR_LEN + *(u64 *)(state.memory + IMG_HDR_ENTRY_POINT);
     state.registers[RSP] = MEMORY_SIZE;
-
-    state.memory = malloc(sizeof(byte) * MEMORY_SIZE);
-    memcpy(state.memory, bytes + IMG_HDR_LEN, code_bytes);
-
-    // Clear non-code memory
-    for (int i = code_bytes; i < MEMORY_SIZE; i++)
-    {
-        state.memory[i] = 0;
-    }
-
-    free(bytes);
 
     while (execute(&state))
     {
-        print_debug(&state);
+        if (state.debug)
+        {
+            print_debug(&state);
+        }
     }
 
     print_debug(&state);

@@ -4,20 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "shared.h"
-
-typedef struct bstring
-{
-    int len;
-    byte* data;
-} bstring;
-
-typedef struct bstring_array
-{
-    unsigned short allocated;
-    unsigned short len;
-    bstring* items;
-} bstring_array;
+#include "bstring.h"
+#include "bemu.h"
 
 typedef struct label
 {
@@ -25,12 +13,8 @@ typedef struct label
     unsigned address;
 } label;
 
-typedef struct label_array
-{
-    unsigned short allocated;
-    unsigned short len;
-    label* items;
-} label_array;
+VECTOR_H(label);
+VECTOR_C(label);
 
 typedef struct jump
 {
@@ -38,213 +22,8 @@ typedef struct jump
     bstring label_name;
 } jump;
 
-typedef struct jump_array
-{
-    unsigned short allocated;
-    unsigned short len;
-    jump* items;
-} jump_array;
-
-void jump_array_new(jump_array* target)
-{
-    target->allocated = 1;
-    target->len = 0;
-    target->items = malloc(sizeof(jump) * target->allocated);
-}
-
-jump* jump_array_add(jump_array* target)
-{
-    if (target->len == target->allocated)
-    {
-        target->allocated *= 2;
-        target->items = realloc(target->items,
-                sizeof(jump) * target->allocated);
-    }
-
-    target->len++;
-    return &target->items[target->len - 1];
-}
-
-void label_array_new(label_array* target)
-{
-    target->allocated = 1;
-    target->len = 0;
-    target->items = malloc(sizeof(label) * target->allocated);
-}
-
-label* label_array_add(label_array* target)
-{
-    if (target->len == target->allocated)
-    {
-        target->allocated *= 2;
-        target->items = realloc(target->items,
-                sizeof(label) * target->allocated);
-    }
-
-    target->len++;
-    return &target->items[target->len - 1];
-}
-
-bstring bstring_from_char(char* src)
-{
-    bstring ret;
-
-    ret.data = src;
-    ret.len = strlen(src);
-
-    return ret;
-}
-
-void bstring_to_char(bstring* src, char* dest)
-{
-    memcpy(dest, src->data, src->len);
-    dest[src->len] = 0;
-}
-
-bstring bstring_clone(bstring* src)
-{
-    bstring ret;
-
-    ret.data = src->data;
-    ret.len = src->len;
-
-    return ret;
-}
-
-int bstring_chr(bstring* haystack, char needle)
-{
-    for (int i = 0; i < haystack->len; i++)
-    {
-        if (*(haystack->data + i) == needle)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-bool bstring_cmp(bstring left, bstring right)
-{
-    if (left.len != right.len)
-    {
-        return false;
-    }
-
-    for (int i = 0; i < left.len; i++)
-    {
-        if (*(left.data + i) != *(right.data + i))
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void bstring_print(bstring* target)
-{
-    for (int i = 0; i < target->len; i++)
-    {
-        putchar(target->data[i]);
-    }
-}
-
-void bstring_array_print(bstring_array* target)
-{
-    for (int i = 0; i < target->len; i++)
-    {
-        bstring_print(&target->items[i]);
-        putchar('\n');
-    }
-}
-
-bool is_whitespace(char c)
-{
-    return c == '\n' || c == ' ' || c == '\t';
-}
-
-void bstring_trim(bstring* target)
-{
-    while (target->len > 0 && is_whitespace(*target->data))
-    {
-        target->data++;
-        target->len--;
-    }
-
-    while (target->len > 0 && is_whitespace(*(target->data + target->len - 1)))
-    {
-        target->len--;
-    }
-}
-
-void bstring_array_new(bstring_array* target)
-{
-    target->allocated = 1;
-    target->len = 0;
-    target->items = malloc(sizeof(bstring) * target->allocated);
-}
-
-bstring* bstring_array_add(bstring_array* target)
-{
-    if (target->len == target->allocated)
-    {
-        target->allocated *= 2;
-        target->items = realloc(target->items,
-                sizeof(bstring) * target->allocated);
-    }
-
-    return &target->items[target->len++];
-}
-
-bool split(bstring* in, const char* separators, bstring_array* out)
-{
-    int separators_len = strnlen(separators, 255);
-    bstring_array_new(out);
-
-    byte* start = NULL;
-    for (int i = 0; i < in->len; i++)
-    {
-        if (!start)
-        {
-            start = in->data + i;
-        }
-
-        if (i < in->len - 1)
-        {
-            bool found = false;
-
-            for (int j = 0; j < separators_len; j++)
-            {
-                if (in->data[i] == separators[j])
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                continue;
-            }
-        }
-
-        bstring* inst = bstring_array_add(out);
-        inst->data = start;
-        inst->len = (in->data + i) - start;
-
-        if (i == in->len - 1)
-        {
-            inst->len++;
-        }
-
-        bstring_trim(inst);
-
-        start = NULL;
-    }
-
-    return true;
-}
+VECTOR_H(jump);
+VECTOR_C(jump);
 
 byte opcode_from_bstring(bstring src)
 {
@@ -276,34 +55,13 @@ byte opcode_from_bstring(bstring src)
 
 byte register_from_bstring(bstring src)
 {
-    if (bstring_cmp(src, bstring_from_char("r0")))
-    {
-        return R0;
-    }
-    if (bstring_cmp(src, bstring_from_char("r1")))
-    {
-        return R1;
-    }
-    else if (bstring_cmp(src, bstring_from_char("r2")))
-    {
-        return R2;
-    }
-    else if (bstring_cmp(src, bstring_from_char("r3")))
-    {
-        return R3;
-    }
-    else if (bstring_cmp(src, bstring_from_char("r4")))
-    {
-        return R4;
-    }
-    else if (bstring_cmp(src, bstring_from_char("rip")))
-    {
-        return RIP;
-    }
-    else if (bstring_cmp(src, bstring_from_char("rsp")))
-    {
-        return RSP;
-    }
+    if      (bstring_cmp(src, bstring_from_char("r0")))  { return R0;  }
+    else if (bstring_cmp(src, bstring_from_char("r1")))  { return R1;  }
+    else if (bstring_cmp(src, bstring_from_char("r2")))  { return R2;  }
+    else if (bstring_cmp(src, bstring_from_char("r3")))  { return R3;  }
+    else if (bstring_cmp(src, bstring_from_char("r4")))  { return R4;  }
+    else if (bstring_cmp(src, bstring_from_char("rip"))) { return RIP; }
+    else if (bstring_cmp(src, bstring_from_char("rsp"))) { return RSP; }
     else
     {
         printf("Unrecognized register.\n");
@@ -330,8 +88,8 @@ void parse_operand(bstring in, operand* out)
 
         int offset = 0;
 
-        bstring_array sections;
-        split(&in, "+-", &sections);
+        vec_bstring sections = vec_bstring_new();
+        bstring_split(&in, "+-", &sections);
 
         byte register_id = register_from_bstring(sections.items[0]);
 
@@ -371,7 +129,7 @@ int instruction_encoded_bytes(instruction* inst)
     return 2 + operands(inst->opcode) * 9;
 }
 
-bool is_label(bstring_array* parts)
+bool is_label(vec_bstring* parts)
 {
     return (parts->len == 1 &&
             parts->items[0].data[parts->items[0].len - 1] == ':');
@@ -385,10 +143,10 @@ bool is_jump(byte opcode)
 }
 
 void parse_instructions(
-        bstring_array* lines,
-        instruction_array* instructions,
-        label_array* labels,
-        jump_array* jumps)
+        vec_bstring* lines,
+        vec_instruction* instructions,
+        vec_label* labels,
+        vec_jump* jumps)
 {
     unsigned offset = 0;
 
@@ -401,13 +159,13 @@ void parse_instructions(
             continue;
         }
 
-        bstring_array parts;
-        split(line, " ", &parts);
+        vec_bstring parts = vec_bstring_new();
+        bstring_split(line, " ", &parts);
 
         // Label?
         if (is_label(&parts))
         {
-            label* lbl = label_array_add(labels);
+            label* lbl = vec_label_add(labels);
 
             lbl->name.data = parts.items[0].data;
             lbl->name.len = parts.items[0].len - 1;
@@ -417,7 +175,7 @@ void parse_instructions(
             goto next;
         }
 
-        instruction* inst = instruction_array_add(instructions);
+        instruction* inst = vec_instruction_add(instructions);
 
         inst->opcode = opcode_from_bstring(parts.items[0]);
         inst->size = B8;
@@ -425,7 +183,7 @@ void parse_instructions(
         // Jumps need their labels resolved in a subsequent pass
         if (is_jump(inst->opcode))
         {
-            jump* jmp = jump_array_add(jumps);
+            jump* jmp = vec_jump_add(jumps);
 
             jmp->inst_index = instructions->len - 1;
             jmp->label_name = bstring_clone(&parts.items[1]);
@@ -454,7 +212,7 @@ void parse_instructions(
     }
 }
 
-label* label_array_find(label_array* labels, bstring name)
+label* vec_label_find(vec_label* labels, bstring name)
 {
     for (int i = 0; i < labels->len; i++)
     {
@@ -468,15 +226,15 @@ label* label_array_find(label_array* labels, bstring name)
 }
 
 void resolve_jumps(
-        instruction_array* instructions,
-        label_array* labels,
-        jump_array* jumps)
+        vec_instruction* instructions,
+        vec_label* labels,
+        vec_jump* jumps)
 {
     for (int i = 0; i < jumps->len; i++)
     {
         jump* jmp = &jumps->items[i];
 
-        label* label = label_array_find(labels, jmp->label_name);
+        label* label = vec_label_find(labels, jmp->label_name);
         if (!label)
         {
             printf("Label not found");
@@ -516,8 +274,8 @@ int instruction_encode(instruction* inst, byte* out)
 }
 
 int encode(
-        instruction_array* instructions,
-        label_array* labels,
+        vec_instruction* instructions,
+        vec_label* labels,
         byte* bytes)
 {
     byte* out = bytes;
@@ -533,9 +291,9 @@ int encode(
     return out - bytes;
 }
 
-int get_entry_point(label_array* labels)
+int get_entry_point(vec_label* labels)
 {
-    label* start = label_array_find(labels, bstring_from_char("start"));
+    label* start = vec_label_find(labels, bstring_from_char("start"));
 
     return start ? start->address : 0;
 }
@@ -563,17 +321,14 @@ void write_to_file(byte* bytes, int count, const char* filename)
 
 byte* assemble(bstring* raw, int* out_bytes_count)
 {
-    bstring_array lines;
-    split(raw, "\n", &lines);
+    vec_bstring lines = vec_bstring_new();
+    bstring_split(raw, "\n", &lines);
 
-    instruction_array instructions;
-    instruction_array_new(&instructions);
+    vec_instruction instructions = vec_instruction_new();
 
-    label_array labels;
-    label_array_new(&labels);
+    vec_label labels = vec_label_new();
 
-    jump_array jumps;
-    jump_array_new(&jumps);
+    vec_jump jumps = vec_jump_new();
 
     parse_instructions(&lines, &instructions, &labels, &jumps);
 
@@ -607,7 +362,8 @@ int main(int argc, char* argv[])
     }
 
     bstring raw;
-    raw.data = read_file(argv[1], &raw.len);
+    raw.data = NULL;
+    raw.data = read_file(argv[1], NULL, &raw.len);
 
     int bytes_len = 0;
     byte* bytes = assemble(&raw, &bytes_len);

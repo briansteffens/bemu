@@ -1,5 +1,7 @@
 #include <stdbool.h>
 
+#include "vector.h"
+
 #define OPERAND_BYTES_LEN 9
 #define DEBUG_STR_LEN 255
 #define MAX_ENCODED_INSTRUCTION_LEN 2 + 9 * 2
@@ -85,16 +87,7 @@ typedef struct instruction
     operand operands[2];
 } instruction;
 
-typedef struct instruction_array
-{
-    unsigned short allocated;
-    unsigned short len;
-    instruction* items;
-} instruction_array;
-
-void instruction_array_new(instruction_array* target);
-
-instruction* instruction_array_add(instruction_array* target);
+VECTOR_H(instruction);
 
 int operand_decode(byte* in, operand* oper);
 
@@ -114,9 +107,9 @@ const char* size_to_string(byte size);
 
 void instruction_print(instruction* inst);
 
-void instruction_array_print(instruction_array* target);
+void vec_instruction_print(vec_instruction* target);
 
-byte* read_file(const char* filename, int* out_bytes_read);
+byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 
 void encode_u64(u64 in, byte* out);
 
