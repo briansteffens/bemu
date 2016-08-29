@@ -1,10 +1,10 @@
-	push 21
+hi:
+	mov r0 [rsp+8]
+	pop rip
 
 start:
-	jmp hello
-	push 12
-
-hello:
 	push 123
-	pop r0
+	push rip
+	pop r1
+
 	exit

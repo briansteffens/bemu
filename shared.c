@@ -41,6 +41,9 @@ int operands(byte opcode)
 {
     switch (opcode)
     {
+        case OP_MOV:
+            return 2;
+
         case OP_PUSH:
         case OP_POP:
         case OP_JMP:
@@ -133,6 +136,9 @@ const char* opcode_to_string(byte opcode)
         case OP_EXIT:
             return "exit";
 
+        case OP_MOV:
+            return "mov";
+
         default:
             printf("Unrecognized opcode\n");
             exit(3);
@@ -222,10 +228,32 @@ byte* read_file(const char* filename, int* out_bytes_read)
     return ret;
 }
 
-void encode_u64(unsigned long long in, unsigned char* out)
+void encode_u64(u64 in, byte* out)
 {
     for (int shift = 0; shift <= 56; shift += 8)
     {
         *(out++) = (in >> shift) & 0xff;
     }
+}
+
+byte operand_unpack_register(operand* oper)
+{
+    return *(byte*)(&oper->data);
+}
+
+byte operand_unpack_offset(operand* oper)
+{
+    return oper->data >> 32;
+}
+
+void u64_debug_print(u64 in)
+{
+    void* p = (void*)&in;
+
+    for (int i = 0; i < 8; ++i)
+    {
+        printf("%02X ", ((unsigned char*)p)[i]);
+    }
+
+    putchar('\n');
 }

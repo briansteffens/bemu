@@ -18,7 +18,8 @@ enum opcodes
     OP_PUSH,
     OP_POP,
     OP_JMP,
-    OP_EXIT
+    OP_EXIT,
+    OP_MOV
 };
 
 enum sizes
@@ -99,4 +100,10 @@ void instruction_array_print(instruction_array* target);
 
 byte* read_file(const char* filename, int* out_bytes_read);
 
-void encode_u64(unsigned long long in, unsigned char* out);
+void encode_u64(u64 in, byte* out);
+
+byte operand_unpack_register(operand* oper);
+
+byte operand_unpack_offset(operand* oper);
+
+void u64_debug_print(u64 in);

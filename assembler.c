@@ -9,7 +9,7 @@
 typedef struct bstring
 {
     int len;
-    unsigned char* data;
+    byte* data;
 } bstring;
 
 typedef struct bstring_array
@@ -93,6 +93,12 @@ bstring bstring_from_char(char* src)
     ret.len = strlen(src);
 
     return ret;
+}
+
+void bstring_to_char(bstring* src, char* dest)
+{
+    memcpy(dest, src->data, src->len);
+    dest[src->len] = 0;
 }
 
 bstring bstring_clone(bstring* src)
@@ -191,11 +197,12 @@ bstring* bstring_array_add(bstring_array* target)
     return &target->items[target->len++];
 }
 
-bool split(bstring* in, char separator, bstring_array* out)
+bool split(bstring* in, const char* separators, bstring_array* out)
 {
+    int separators_len = strnlen(separators, 255);
     bstring_array_new(out);
 
-    unsigned char* start = NULL;
+    byte* start = NULL;
     for (int i = 0; i < in->len; i++)
     {
         if (!start)
@@ -203,15 +210,23 @@ bool split(bstring* in, char separator, bstring_array* out)
             start = in->data + i;
         }
 
-        if (in->data[i] != separator && i < in->len - 1)
+        if (i < in->len - 1)
         {
-            continue;
-        }
+            bool found = false;
 
-        int len = (in->data + i) - start;
-        if (len == 0)
-        {
-            continue;
+            for (int j = 0; j < separators_len; j++)
+            {
+                if (in->data[i] == separators[j])
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                continue;
+            }
         }
 
         bstring* inst = bstring_array_add(out);
@@ -231,7 +246,7 @@ bool split(bstring* in, char separator, bstring_array* out)
     return true;
 }
 
-unsigned char opcode_from_bstring(bstring src)
+byte opcode_from_bstring(bstring src)
 {
     if (bstring_cmp(src, bstring_from_char("push")))
     {
@@ -249,12 +264,16 @@ unsigned char opcode_from_bstring(bstring src)
     {
         return OP_EXIT;
     }
+    else if (bstring_cmp(src, bstring_from_char("mov")))
+    {
+        return OP_MOV;
+    }
 
     printf("Unrecognized opcode\n");
     exit(6);
 }
 
-unsigned char register_from_bstring(bstring src)
+byte register_from_bstring(bstring src)
 {
     if (bstring_cmp(src, bstring_from_char("r0")))
     {
@@ -275,6 +294,14 @@ unsigned char register_from_bstring(bstring src)
     else if (bstring_cmp(src, bstring_from_char("r4")))
     {
         return R4;
+    }
+    else if (bstring_cmp(src, bstring_from_char("rip")))
+    {
+        return RIP;
+    }
+    else if (bstring_cmp(src, bstring_from_char("rsp")))
+    {
+        return RSP;
     }
     else
     {
@@ -298,8 +325,29 @@ void parse_operand(bstring in, operand* out)
 
     if (*in.data == 'r')
     {
-        out->data = register_from_bstring(in);
         out->type = REGISTER;
+
+        int offset = 0;
+
+        bstring_array sections;
+        split(&in, "+-", &sections);
+
+        byte register_id = register_from_bstring(sections.items[0]);
+
+        if (sections.len == 2)
+        {
+            char buf[11];
+            bstring_to_char(&sections.items[1], buf);
+
+            offset = atoi(buf);
+
+            if (*(in.data + sections.items[0].len) == '-')
+            {
+                offset *= -1;
+            }
+        }
+
+        out->data = (u64)offset << 32 | register_id;
     }
     else
     {
@@ -346,7 +394,7 @@ void parse_instructions(
         }
 
         bstring_array parts;
-        split(line, ' ', &parts);
+        split(line, " ", &parts);
 
         // Label?
         if (is_label(&parts))
@@ -435,15 +483,15 @@ void resolve_jumps(
     }
 }
 
-void operand_encode(operand* oper, unsigned char* out)
+void operand_encode(operand* oper, byte* out)
 {
     *(out++) = oper->type | oper->mode << 1;
     encode_u64(oper->data, out);
 }
 
-int instruction_encode(instruction* inst, unsigned char* out)
+int instruction_encode(instruction* inst, byte* out)
 {
-    unsigned char* src = out;
+    byte* src = out;
 
     *(src++) = inst->opcode;
     *(src++) = inst->size;
@@ -462,9 +510,9 @@ int instruction_encode(instruction* inst, unsigned char* out)
 int encode(
         instruction_array* instructions,
         label_array* labels,
-        unsigned char* bytes)
+        byte* bytes)
 {
-    unsigned char* out = bytes;
+    byte* out = bytes;
 
     int next_label_index = 0;
     label* next_label = NULL;
@@ -484,7 +532,7 @@ int get_entry_point(label_array* labels)
     return start ? start->address : 0;
 }
 
-void write_to_file(unsigned char* bytes, int count, const char* filename)
+void write_to_file(byte* bytes, int count, const char* filename)
 {
     FILE* file = fopen(filename, "w");
 
@@ -505,10 +553,10 @@ void write_to_file(unsigned char* bytes, int count, const char* filename)
     fclose(file);
 }
 
-unsigned char* assemble(bstring* raw, int* out_bytes_count)
+byte* assemble(bstring* raw, int* out_bytes_count)
 {
     bstring_array lines;
-    split(raw, '\n', &lines);
+    split(raw, "\n", &lines);
 
     instruction_array instructions;
     instruction_array_new(&instructions);
@@ -523,15 +571,12 @@ unsigned char* assemble(bstring* raw, int* out_bytes_count)
 
     resolve_jumps(&instructions, &labels, &jumps);
 
-    unsigned char* bytes = malloc(sizeof(unsigned char) *
+    byte* bytes = malloc(sizeof(byte) *
             IMG_HDR_LEN + MAX_ENCODED_INSTRUCTION_LEN * instructions.len);
 
-    unsigned long long code_bytes = encode(
-            &instructions,
-            &labels,
-            bytes + IMG_HDR_LEN);
+    u64 code_bytes = encode(&instructions, &labels, bytes + IMG_HDR_LEN);
 
-    unsigned long long entry_point = get_entry_point(&labels);
+    u64 entry_point = get_entry_point(&labels);
 
     encode_u64(code_bytes, bytes + IMG_HDR_CODE_BYTES);
     encode_u64(entry_point, bytes + IMG_HDR_ENTRY_POINT);
@@ -557,7 +602,7 @@ int main(int argc, char* argv[])
     raw.data = read_file(argv[1], &raw.len);
 
     int bytes_len = 0;
-    unsigned char* bytes = assemble(&raw, &bytes_len);
+    byte* bytes = assemble(&raw, &bytes_len);
 
     free(raw.data);
 
