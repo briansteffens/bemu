@@ -55,19 +55,17 @@ int operands(byte opcode)
 
 int instruction_decode(byte* in, instruction* out)
 {
-    byte* src = in;
-
-    out->opcode = *(src++);
-    out->size = *(src++);
+    out->opcode = in[0];
+    out->size = in[1];
 
     int operand_count = operands(out->opcode);
 
     for (int i = 0; i < operand_count; i++)
     {
-        src += operand_decode(src, &out->operands[i]);
+        operand_decode(in + i * 9 + 2, &out->operands[i]);
     }
 
-    return src - in;
+    return operand_count * 9 + 2;
 }
 
 const char* operand_type_to_string(byte type)
@@ -111,6 +109,7 @@ const char* register_to_string(byte r)
         case R2:    return "r2";
         case R3:    return "r3";
         case R4:    return "r4";
+        case R5:    return "r5";
         case RIP:   return "rip";
         case RSP:   return "rsp";
         case RFLAG: return "rflag";

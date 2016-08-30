@@ -61,6 +61,7 @@ byte register_from_bstring(bstring src)
     else if (bstring_cmp(src, bstring_from_char("r2")))   { return R2;  }
     else if (bstring_cmp(src, bstring_from_char("r3")))   { return R3;  }
     else if (bstring_cmp(src, bstring_from_char("r4")))   { return R4;  }
+    else if (bstring_cmp(src, bstring_from_char("r5")))   { return R5;  }
     else if (bstring_cmp(src, bstring_from_char("rip")))  { return RIP; }
     else if (bstring_cmp(src, bstring_from_char("rsp")))  { return RSP; }
     else if (bstring_cmp(src, bstring_from_char("rmem"))) { return RMEM; }

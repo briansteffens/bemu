@@ -10,7 +10,7 @@
 #define IMG_HDR_CODE_BYTES 0
 #define IMG_HDR_ENTRY_POINT 8
 
-#define REGISTER_COUNT 9
+#define REGISTER_COUNT 10
 
 typedef unsigned long long u64;
 typedef long long i64;
@@ -57,6 +57,7 @@ enum registers
     R2,
     R3,
     R4,
+    R5,
     RIP,
     RSP,
     RFLAG,
