@@ -1,6 +1,9 @@
 start:
-    mov [rmem] 1
-    mov [rmem+8] 2
+    # Count previous primes
+    mov r5 1
+
+    # Initial prime of 2
+    mov [rmem] 2
 
     # Check
     mov r0 1
@@ -12,10 +15,8 @@ check_next:
     cmp r0 1000
     jge end
 
-    # Pointer to previous
-    mov r1 rmem
-    add r1 8
-    mov r2 [rmem]
+    # Loop counter for previous_next
+    mov r1 0
 
     # Divide check in half
     mov r3 r0
@@ -23,29 +24,27 @@ check_next:
 
     previous_next:
         # End previous loop if previous prime list exhausted
-        cmp r2 0
-        jle found_one
+        cmp r1 r5
+        jge found_one
 
         # This is a prime if a previous prime is greater than half this one
-        cmp [r1] r3
+        cmp [r1*8+rmem] r3
         jg found_one
 
         # If check is evenly divisible by a previous prime it's not a prime
         mov r4 r0
-        mod r4 [r1]
+        mod r4 [r1*8+rmem]
         cmp r4 0
         je check_next
 
         # Test next previous prime
-        dec r2
-        add r1 8
+        inc r1
         jmp previous_next
 
     found_one:
         # Add prime to found/previous list
-        inc [rmem]
-        mov r4 [rmem]
-        mov [r4*8+rmem] r0
+        mov [r5*8+rmem] r0
+        inc r5
         print r0
 
     jmp check_next
