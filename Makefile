@@ -1,4 +1,5 @@
 #FLAGS=-pg
+#FLAGS=-g
 
 default: build
 

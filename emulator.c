@@ -23,85 +23,61 @@ typedef struct
     bool debug;
 } machine_state;
 
-byte* resolve_operand(machine_state* state, operand* oper)
+byte* resolve_operand(machine_state* state, instruction* inst, int ordinal)
 {
-    byte* ret = NULL;
+    byte type = inst->operand_types[ordinal];
+    complex_operand* comp = (complex_operand*)&inst->operands[ordinal];
 
-    switch (oper->type)
+    if (type & COMPLEX)
     {
-        case IMMEDIATE:
-            ret = (byte*)&oper->data;
-            break;
+        u64 addr = state->registers[comp->base];
 
-        case REGISTER: ;
-            byte register_id = operand_unpack_register(oper);
-            byte multiplier = operand_unpack_multiplier(oper);
-            byte register2_sign = operand_unpack_register2_sign(oper);
-            int offset = operand_unpack_offset(oper);
+        if (comp->multiplier)
+        {
+            addr *= comp->multiplier;
+        }
 
-            // Simple
-            if (multiplier == 0 && register2_sign == 0 && offset == 0)
+        if (comp->register2_sign != 0)
+        {
+            u64 register2_val = state->registers[comp->register2];
+
+            if (comp->register2_sign)
             {
-                ret = (byte*)&state->registers[register_id];
-                break;
+                addr += register2_val;
             }
-
-            // Complex
-            if (oper->mode == LITERAL)
+            else
             {
-                printf("Invalid mix of LITERAL and complex REGISTER\n");
-                exit(7);
+                addr -= register2_val;
             }
+        }
 
-            u64 addr = state->registers[register_id];
+        if (comp->offset != 0)
+        {
+            addr += comp->offset;
+        }
 
-            if (multiplier)
-            {
-                addr *= multiplier;
-            }
-
-            if (register2_sign != 0)
-            {
-                u64 register2_val =
-                        state->registers[operand_unpack_register2(oper)];
-
-                if (register2_sign)
-                {
-                    addr += register2_val;
-                }
-                else
-                {
-                    addr -= register2_val;
-                }
-            }
-
-            if (offset != 0)
-            {
-                addr += offset;
-            }
-
-            return &state->memory[addr];
-
-        default:
-            printf("Unrecognized operand type\n");
-            exit(3);
+        return &state->memory[addr];
     }
 
-    switch (oper->mode)
+    u64* ret = NULL;
+
+    if (type & IMMEDIATE)
     {
-        case LITERAL:
-            break;
-
-        case ADDRESS:
-            ret = &state->memory[*(u64*)ret + operand_unpack_offset(oper)];
-            break;
-
-        default:
-            printf("Unrecognized operand mode\n");
-            exit(4);
+        ret = &inst->operands[ordinal];
+    }
+    else if (type & REGISTER)
+    {
+        ret = &state->registers[comp->base];
     }
 
-    return ret;
+    if (type & ADDRESS)
+    {
+        return &state->memory[*ret];
+    }
+    else
+    {
+        return (byte*)ret;
+    }
 }
 
 void push(machine_state* state, byte* data, byte size)
@@ -121,7 +97,7 @@ void pop(machine_state* state, byte* target, byte size)
 void jump(machine_state* state, instruction* inst)
 {
     state->registers[RIP] =
-        IMG_HDR_LEN + *(u64*)resolve_operand(state, &inst->operands[0]);
+        IMG_HDR_LEN + *(u64*)resolve_operand(state, inst, 0);
 }
 
 void execute_jmp(machine_state* state, instruction* inst)
@@ -131,18 +107,18 @@ void execute_jmp(machine_state* state, instruction* inst)
 
 void execute_push(machine_state* state, instruction* inst)
 {
-    push(state, resolve_operand(state, &inst->operands[0]), inst->size);
+    push(state, resolve_operand(state, inst, 0), inst->size);
 }
 
 void execute_pop(machine_state* state, instruction* inst)
 {
-    pop(state, resolve_operand(state, &inst->operands[0]), inst->size);
+    pop(state, resolve_operand(state, inst, 0), inst->size);
 }
 
 void execute_mov(machine_state* state, instruction* inst)
 {
-    memcpy(resolve_operand(state, &inst->operands[0]),
-           resolve_operand(state, &inst->operands[1]),
+    memcpy(resolve_operand(state, inst, 0),
+           resolve_operand(state, inst, 1),
            inst->size);
 }
 
@@ -162,9 +138,9 @@ void basic_math(
         instruction* inst,
         u64 (*handler)(u64, u64))
 {
-    byte* target = resolve_operand(state, &inst->operands[0]);
+    byte* target = resolve_operand(state, inst, 0);
     u64 left = *(u64*)target;
-    u64 right = *(u64*)resolve_operand(state, &inst->operands[1]);
+    u64 right = *(u64*)resolve_operand(state, inst, 1);
     u64 result = handler(left, right);
     memcpy(target, &result, inst->size);
 }
@@ -187,22 +163,22 @@ math_handler(mod, %)
 
 void execute_inc(machine_state* state, instruction* inst)
 {
-    byte* target = resolve_operand(state, &inst->operands[0]);
+    byte* target = resolve_operand(state, inst, 0);
     u64 result = ++*(u64*)target;
     memcpy(target, &result, inst->size);
 }
 
 void execute_dec(machine_state* state, instruction* inst)
 {
-    byte* target = resolve_operand(state, &inst->operands[0]);
+    byte* target = resolve_operand(state, inst, 0);
     u64 result = --*(u64*)target;
     memcpy(target, &result, inst->size);
 }
 
 void execute_cmp(machine_state* state, instruction* inst)
 {
-    u64 left = *(u64*)resolve_operand(state, &inst->operands[0]);
-    u64 right = *(u64*)resolve_operand(state, &inst->operands[1]);
+    u64 left = *(u64*)resolve_operand(state, inst, 0);
+    u64 right = *(u64*)resolve_operand(state, inst, 1);
     u64 result = left - right;
     memcpy(&state->registers[RFLAG], &result, inst->size);
 }
@@ -225,7 +201,7 @@ conditional_handler(jge, >=)
 
 void execute_print(machine_state* state, instruction* inst)
 {
-    printf("%llu\n", *(u64*)resolve_operand(state, &inst->operands[0]));
+    printf("%llu\n", *(u64*)resolve_operand(state, inst, 0));
 }
 
 void instruction_print(instruction* inst)
@@ -242,26 +218,26 @@ void instruction_print(instruction* inst)
 
     for (int i = 0; i < operand_count; i++)
     {
-        operand_to_string(&inst->operands[i], buffer);
+        operand_to_string(inst, i, buffer);
         printf(" %s", buffer);
     }
 
     printf("\n" CLR_RESET);
 }
 
-int read_next_instruction(machine_state* state, instruction* inst)
+int read_next_instruction(machine_state* state, instruction** inst)
 {
     return instruction_decode(state->memory + state->registers[RIP], inst);
 }
 
 bool execute(machine_state* state)
 {
-    instruction inst;
+    instruction* inst;
     state->registers[RIP] += read_next_instruction(state, &inst);
 
     void (*func)(machine_state* state, instruction* inst);
 
-    switch (inst.opcode)
+    switch (inst->opcode)
     {
         case OP_JMP:   func = execute_jmp;   break;
         case OP_PUSH:  func = execute_push;  break;
@@ -293,7 +269,7 @@ bool execute(machine_state* state)
             exit(3);
     }
 
-    func(state, &inst);
+    func(state, inst);
 
     return true;
 }
@@ -384,11 +360,11 @@ int main(int argc, char* argv[])
 
         print_debug(&state);
 
-        instruction inst;
+        instruction* inst;
         read_next_instruction(&state, &inst);
 
         printf(CLR_GREEN);
-        instruction_print(&inst);
+        instruction_print(inst);
         printf(CLR_RESET);
 
         // Debug prompt

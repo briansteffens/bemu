@@ -12,7 +12,7 @@ check_next:
 
     # Increment check, end if limit passed
     add r0 2
-    cmp r0 1000
+    cmp r0 10000
     jge end
 
     # Loop counter for previous_next

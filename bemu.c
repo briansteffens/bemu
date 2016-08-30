@@ -6,15 +6,6 @@
 
 VECTOR_C(instruction);
 
-int operand_decode(byte* in, operand* oper)
-{
-    oper->type = (*in & (1 << 0)) >> 0;
-    oper->mode = (*in & (1 << 1)) >> 1;
-    oper->data = *(long long *)(in + 1);
-
-    return 9;
-}
-
 int operands(byte opcode)
 {
     switch (opcode)
@@ -53,8 +44,14 @@ int operands(byte opcode)
     }
 }
 
-int instruction_decode(byte* in, instruction* out)
+int instruction_decode(byte* in, instruction** out)
 {
+    *out = (instruction*)in;
+
+    return operands((*out)->opcode) * sizeof(u64) + 8;
+/*
+    instruction* inst = (instruction*)in;
+
     out->opcode = in[0];
     out->size = in[1];
 
@@ -66,38 +63,7 @@ int instruction_decode(byte* in, instruction* out)
     }
 
     return operand_count * 9 + 2;
-}
-
-const char* operand_type_to_string(byte type)
-{
-    switch (type)
-    {
-        case IMMEDIATE:
-            return "IMMEDIATE";
-
-        case REGISTER:
-            return "REGISTER";
-
-        default:
-            printf("Unrecognized operand type\n");
-            exit(1);
-    }
-}
-
-const char* operand_mode_to_string(byte mode)
-{
-    switch (mode)
-    {
-        case LITERAL:
-            return "LITERAL";
-
-        case ADDRESS:
-            return "ADDRESS";
-
-        default:
-            printf("Unrecognized operand mode\n");
-            exit(2);
-    }
+*/
 }
 
 const char* register_to_string(byte r)
@@ -121,50 +87,44 @@ const char* register_to_string(byte r)
     }
 }
 
-void operand_to_string(operand* oper, char* out)
+void operand_to_string(instruction* inst, int ordinal, char* out)
 {
-    if (oper->mode == ADDRESS)
+    byte type = inst->operand_types[ordinal];
+
+    if (type & ADDRESS)
     {
         *(out++) = '[';
     }
 
-    switch (oper->type)
+    if (type & IMMEDIATE)
     {
-        case IMMEDIATE:
-            out += snprintf(out, 32, "%llu", oper->data);
-            break;
+        out += snprintf(out, 32, "%llu", inst->operands[ordinal]);
+    }
+    else if (type & REGISTER)
+    {
+        complex_operand* comp = (complex_operand*)&inst->operands[ordinal];
 
-        case REGISTER:
-            out += snprintf(out, 32, "%s",
-                    register_to_string(operand_unpack_register(oper)));
+        out += snprintf(out, 32, "%s", register_to_string(comp->base));
 
-            byte multiplier = operand_unpack_multiplier(oper);
-            if (multiplier > 0)
-            {
-                out += snprintf(out, 4, "*%d", multiplier);
-            }
+        if (comp->multiplier > 0)
+        {
+            out += snprintf(out, 4, "*%d", comp->multiplier);
+        }
 
-            byte register2_sign = operand_unpack_register2_sign(oper);
-            if (register2_sign != 0)
-            {
-                out += snprintf(out, 32, "%c%s", register2_sign ? '+' : '-',
-                        register_to_string(operand_unpack_register2(oper)));
-            }
+        if (comp->register2_sign != 0)
+        {
+            out += snprintf(out, 32, "%c%s", comp->register2_sign ? '+' : '-',
+                    register_to_string(comp->register2));
+        }
 
-            int offset = operand_unpack_offset(oper);
-            if (offset > 0)
-            {
-                out += snprintf(out, 32, "%c%d", offset ? '+' : '-', offset);
-            }
-
-            break;
-
-        default:
-            printf("Unrecognized operand type\n");
-            exit(20);
+        if (comp->offset > 0)
+        {
+            out += snprintf(out, 32, "%c%d", comp->offset ? '+' : '-',
+                            comp->offset);
+        }
     }
 
-    if (oper->mode == ADDRESS)
+    if (type & ADDRESS)
     {
         *(out++) = ']';
     }
@@ -269,31 +229,6 @@ void encode_u64(u64 in, byte* out)
     {
         *(out++) = (in >> shift) & 0xff;
     }
-}
-
-byte operand_unpack_register(operand* oper)
-{
-    return *(byte*)(&oper->data);
-}
-
-byte operand_unpack_multiplier(operand* oper)
-{
-    return (oper->data >> (8 * 1)) & 0xff;
-}
-
-byte operand_unpack_register2_sign(operand* oper)
-{
-    return (oper->data >> (8 * 2)) & 0xff;
-}
-
-byte operand_unpack_register2(operand* oper)
-{
-    return (oper->data >> (8 * 3)) & 0xff;
-}
-
-int operand_unpack_offset(operand* oper)
-{
-    return oper->data >> 32;
 }
 
 void u64_debug_print(u64 in)

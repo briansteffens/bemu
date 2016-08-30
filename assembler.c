@@ -79,31 +79,38 @@ int bstring_to_int(bstring* in)
     return atoi(buf);
 }
 
-void parse_operand(bstring in, operand* out)
+void parse_operand(bstring in, instruction* inst, int ordinal)
 {
+    byte* type = &inst->operand_types[ordinal];
+    *type = 0;
+
+    u64* data = &inst->operands[ordinal];
+
     if (*in.data == '[' && *(in.data + in.len - 1) == ']')
     {
-        out->mode = ADDRESS;
+        *type |= ADDRESS;
         in.data++;
         in.len -= 2;
     }
     else
     {
-        out->mode = LITERAL;
+        *type |= LITERAL;
     }
 
     if (*in.data == 'r')
     {
-        out->type = REGISTER;
+        *type |= REGISTER;
 
         vec_bstring sections = vec_bstring_new();
         bstring_split(&in, "*+-", &sections);
 
-        byte register_id = register_from_bstring(sections.items[0]);
-        byte multiplier = 0;
-        byte register2_sign = 0;
-        byte register2 = 0;
-        int offset = 0;
+        complex_operand* comp = (complex_operand*)data;
+
+        comp->base = register_from_bstring(sections.items[0]);
+        comp->multiplier = 0;
+        comp->register2_sign = 0;
+        comp->register2 = 0;
+        comp->offset = 0;
 
         for (int i = 1; i < sections.len; i++)
         {
@@ -111,32 +118,32 @@ void parse_operand(bstring in, operand* out)
 
             if (sign == '*')
             {
-                multiplier = bstring_to_int(&sections.items[i]);
+                comp->multiplier = bstring_to_int(&sections.items[i]);
             }
             else
             {
                 if (*sections.items[i].data == 'r')
                 {
-                    register2 = register_from_bstring(sections.items[i]);
-                    register2_sign = sign == '+';
+                    comp->register2 = register_from_bstring(sections.items[i]);
+                    comp->register2_sign = sign == '+';
                 }
                 else
                 {
-                    offset = bstring_to_int(&sections.items[i]);
+                    comp->offset = bstring_to_int(&sections.items[i]);
 
                     if (sign == '-')
                     {
-                        offset *= -1;
+                        comp->offset *= -1;
                     }
                 }
             }
         }
 
-        out->data = register_id          |
-                    multiplier     << 8  |
-                    register2_sign << 16 |
-                    register2      << 24 |
-                    (u64)offset    << 32;
+        if (comp->multiplier != 0 || comp->register2_sign != 0 ||
+            comp->offset != 0)
+        {
+            *type |= COMPLEX;
+        }
     }
     else
     {
@@ -149,14 +156,9 @@ void parse_operand(bstring in, operand* out)
 
         buf[in.len] = 0;
 
-        out->data = strtoll(buf, NULL, 0);
-        out->type = IMMEDIATE;
+        *data = strtoll(buf, NULL, 0);
+        *type |= IMMEDIATE;
     }
-}
-
-int instruction_encoded_bytes(instruction* inst)
-{
-    return 2 + operands(inst->opcode) * 9;
 }
 
 bool is_label(vec_bstring* parts)
@@ -170,6 +172,11 @@ bool is_jump(byte opcode)
     return opcode == OP_JMP || opcode == OP_JE || opcode == OP_JNE ||
            opcode == OP_JL || opcode == OP_JLE ||
            opcode == OP_JG || opcode == OP_JGE;
+}
+
+int instruction_encoded_len(int operands)
+{
+    return 8 + operands * 8;
 }
 
 void parse_instructions(
@@ -231,11 +238,11 @@ void parse_instructions(
 
         for (int i = 1; i < parts.len; i++)
         {
-            parse_operand(parts.items[i], &inst->operands[i - 1]);
+            parse_operand(parts.items[i], inst, i - 1);
         }
 
     next_and_offset:
-        offset += instruction_encoded_bytes(inst);
+        offset += instruction_encoded_len(operands(inst->opcode));
 
     next:
         free(parts.items);
@@ -271,36 +278,11 @@ void resolve_jumps(
             exit(8);
         }
 
-        operand* oper = &instructions->items[jmp->inst_index].operands[0];
+        instruction* inst = &instructions->items[jmp->inst_index];
 
-        oper->type = IMMEDIATE;
-        oper->mode = LITERAL;
-        oper->data = label->address;
+        inst->operand_types[0] = IMMEDIATE | LITERAL;
+        inst->operands[0] = label->address;
     }
-}
-
-void operand_encode(operand* oper, byte* out)
-{
-    *(out++) = oper->type | oper->mode << 1;
-    encode_u64(oper->data, out);
-}
-
-int instruction_encode(instruction* inst, byte* out)
-{
-    byte* src = out;
-
-    *(src++) = inst->opcode;
-    *(src++) = inst->size;
-
-    int operand_count = operands(inst->opcode);
-
-    for (int i = 0; i < operand_count; i++)
-    {
-        operand_encode(&inst->operands[i], src);
-        src += OPERAND_BYTES_LEN;
-    }
-
-    return src - out;
 }
 
 int encode(
@@ -315,7 +297,10 @@ int encode(
 
     for (int i = 0; i < instructions->len; i++)
     {
-        out += instruction_encode(&instructions->items[i], out);
+        int len = instruction_encoded_len(
+                operands(instructions->items[i].opcode));
+        memcpy(out, &instructions->items[i], len);
+        out += len;
     }
 
     return out - bytes;
@@ -365,7 +350,7 @@ byte* assemble(bstring* raw, int* out_bytes_count)
     resolve_jumps(&instructions, &labels, &jumps);
 
     byte* bytes = malloc(sizeof(byte) *
-            IMG_HDR_LEN + MAX_ENCODED_INSTRUCTION_LEN * instructions.len);
+            IMG_HDR_LEN + sizeof(instruction) * instructions.len);
 
     u64 code_bytes = encode(&instructions, &labels, bytes + IMG_HDR_LEN);
 
