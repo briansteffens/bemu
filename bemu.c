@@ -124,17 +124,40 @@ const char* register_to_string(byte r)
 
 void operand_to_string(operand* oper, char* out)
 {
-    char core[32];
+    if (oper->mode == ADDRESS)
+    {
+        *(out++) = '[';
+    }
 
     switch (oper->type)
     {
         case IMMEDIATE:
-            snprintf(core, 32, "%llu", oper->data);
+            out += snprintf(out, 32, "%llu", oper->data);
             break;
 
         case REGISTER:
-            snprintf(core, 32, "%s",
-                     register_to_string(operand_unpack_register(oper)));
+            out += snprintf(out, 32, "%s",
+                    register_to_string(operand_unpack_register(oper)));
+
+            byte multiplier = operand_unpack_multiplier(oper);
+            if (multiplier > 0)
+            {
+                out += snprintf(out, 4, "*%d", multiplier);
+            }
+
+            byte register2_sign = operand_unpack_register2_sign(oper);
+            if (register2_sign != 0)
+            {
+                out += snprintf(out, 32, "%c%s", register2_sign ? '+' : '-',
+                        register_to_string(operand_unpack_register2(oper)));
+            }
+
+            int offset = operand_unpack_offset(oper);
+            if (offset > 0)
+            {
+                out += snprintf(out, 32, "%c%d", offset ? '+' : '-', offset);
+            }
+
             break;
 
         default:
@@ -144,22 +167,10 @@ void operand_to_string(operand* oper, char* out)
 
     if (oper->mode == ADDRESS)
     {
-        int offset = operand_unpack_offset(oper);
+        *(out++) = ']';
+    }
 
-        if (offset == 0)
-        {
-            snprintf(out, DEBUG_STR_LEN, "[%s]", core);
-        }
-        else
-        {
-            char sign = offset > 0 ? '+' : '-';
-            snprintf(out, DEBUG_STR_LEN, "[%s%c%d]", core, sign, offset);
-        }
-    }
-    else
-    {
-        snprintf(out, DEBUG_STR_LEN, "%s", core);
-    }
+    *out = 0;
 }
 
 const char* opcode_to_string(byte opcode)
@@ -264,6 +275,21 @@ void encode_u64(u64 in, byte* out)
 byte operand_unpack_register(operand* oper)
 {
     return *(byte*)(&oper->data);
+}
+
+byte operand_unpack_multiplier(operand* oper)
+{
+    return (oper->data >> (8 * 1)) & 0xff;
+}
+
+byte operand_unpack_register2_sign(operand* oper)
+{
+    return (oper->data >> (8 * 2)) & 0xff;
+}
+
+byte operand_unpack_register2(operand* oper)
+{
+    return (oper->data >> (8 * 3)) & 0xff;
 }
 
 int operand_unpack_offset(operand* oper)

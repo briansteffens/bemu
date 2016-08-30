@@ -33,9 +33,54 @@ byte* resolve_operand(machine_state* state, operand* oper)
             ret = (byte*)&oper->data;
             break;
 
-        case REGISTER:
-            ret = (byte*)&state->registers[operand_unpack_register(oper)];
-            break;
+        case REGISTER: ;
+            byte register_id = operand_unpack_register(oper);
+            byte multiplier = operand_unpack_multiplier(oper);
+            byte register2_sign = operand_unpack_register2_sign(oper);
+            int offset = operand_unpack_offset(oper);
+
+            // Simple
+            if (multiplier == 0 && register2_sign == 0 && offset == 0)
+            {
+                ret = (byte*)&state->registers[register_id];
+                break;
+            }
+
+            // Complex
+            if (oper->mode == LITERAL)
+            {
+                printf("Invalid mix of LITERAL and complex REGISTER\n");
+                exit(7);
+            }
+
+            u64 addr = state->registers[register_id];
+
+            if (multiplier)
+            {
+                addr *= multiplier;
+            }
+
+            if (register2_sign != 0)
+            {
+                u64 register2_val =
+                        state->registers[operand_unpack_register2(oper)];
+
+                if (register2_sign)
+                {
+                    addr += register2_val;
+                }
+                else
+                {
+                    addr -= register2_val;
+                }
+            }
+
+            if (offset != 0)
+            {
+                addr += offset;
+            }
+
+            return &state->memory[addr];
 
         default:
             printf("Unrecognized operand type\n");
@@ -255,7 +300,7 @@ bool execute(machine_state* state)
 
 void print_debug(machine_state* state)
 {
-    for (int i = 0; i < REGISTER_COUNT; i++)
+    for (int i = 1; i < REGISTER_COUNT; i++)
     {
         if (i != RFLAG)
         {
@@ -359,7 +404,10 @@ int main(int argc, char* argv[])
         free(input);
     } while (execute(&state));
 
-    print_debug(&state);
+    if (state.debug)
+    {
+        print_debug(&state);
+    }
 
     free(state.memory);
 

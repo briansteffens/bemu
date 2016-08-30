@@ -71,6 +71,13 @@ byte register_from_bstring(bstring src)
     }
 }
 
+int bstring_to_int(bstring* in)
+{
+    char buf[21];
+    bstring_to_char(in, buf);
+    return atoi(buf);
+}
+
 void parse_operand(bstring in, operand* out)
 {
     if (*in.data == '[' && *(in.data + in.len - 1) == ']')
@@ -88,27 +95,47 @@ void parse_operand(bstring in, operand* out)
     {
         out->type = REGISTER;
 
-        int offset = 0;
-
         vec_bstring sections = vec_bstring_new();
-        bstring_split(&in, "+-", &sections);
+        bstring_split(&in, "*+-", &sections);
 
         byte register_id = register_from_bstring(sections.items[0]);
+        byte multiplier = 0;
+        byte register2_sign = 0;
+        byte register2 = 0;
+        int offset = 0;
 
-        if (sections.len == 2)
+        for (int i = 1; i < sections.len; i++)
         {
-            char buf[11];
-            bstring_to_char(&sections.items[1], buf);
+            char sign = *(sections.items[i].data - 1);
 
-            offset = atoi(buf);
-
-            if (*(in.data + sections.items[0].len) == '-')
+            if (sign == '*')
             {
-                offset *= -1;
+                multiplier = bstring_to_int(&sections.items[i]);
+            }
+            else
+            {
+                if (*sections.items[i].data == 'r')
+                {
+                    register2 = register_from_bstring(sections.items[i]);
+                    register2_sign = sign == '+';
+                }
+                else
+                {
+                    offset = bstring_to_int(&sections.items[i]);
+
+                    if (sign == '-')
+                    {
+                        offset *= -1;
+                    }
+                }
             }
         }
 
-        out->data = (u64)offset << 32 | register_id;
+        out->data = register_id          |
+                    multiplier     << 8  |
+                    register2_sign << 16 |
+                    register2      << 24 |
+                    (u64)offset    << 32;
     }
     else
     {

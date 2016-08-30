@@ -2,43 +2,50 @@ start:
     mov [rmem] 1
     mov [rmem+8] 2
 
+    # Check
     mov r0 1
 
 check_next:
+
+    # Increment check, end if limit passed
     add r0 2
     cmp r0 1000
     jge end
 
+    # Pointer to previous
     mov r1 rmem
     add r1 8
     mov r2 [rmem]
 
+    # Divide check in half
     mov r3 r0
     div r3 2
 
     previous_next:
+        # End previous loop if previous prime list exhausted
         cmp r2 0
         jle found_one
 
+        # This is a prime if a previous prime is greater than half this one
         cmp [r1] r3
         jg found_one
 
+        # If check is evenly divisible by a previous prime it's not a prime
         mov r4 r0
         mod r4 [r1]
         cmp r4 0
         je check_next
 
+        # Test next previous prime
         dec r2
         add r1 8
-
         jmp previous_next
 
     found_one:
+        # Add prime to found/previous list
         inc [rmem]
         mov r4 [rmem]
-        mul r4 8
-        add r4 rmem
-        mov [r4] r0
+        mov [r4*8+rmem] r0
         print r0
 
     jmp check_next

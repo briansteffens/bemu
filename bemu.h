@@ -112,7 +112,9 @@ byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 void encode_u64(u64 in, byte* out);
 
 byte operand_unpack_register(operand* oper);
-
+byte operand_unpack_multiplier(operand* oper);
+byte operand_unpack_register2_sign(operand* oper);
+byte operand_unpack_register2(operand* oper);
 int operand_unpack_offset(operand* oper);
 
 void u64_debug_print(u64 in);
