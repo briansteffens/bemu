@@ -7,6 +7,15 @@
 
 #define MEMORY_SIZE 32 * 1024 * 1024
 
+#define CLR_RESET   "\x1B[0m"
+#define CLR_RED     "\x1B[31m"
+#define CLR_GREEN   "\x1B[32m"
+#define CLR_YELLOW  "\x1B[33m"
+#define CLR_BLUE    "\x1B[34m"
+#define CLR_MAGENTA "\x1B[35m"
+#define CLR_CYAN    "\x1B[36m"
+#define CLR_WHITE   "\x1B[37m"
+
 typedef struct
 {
     u64 registers[REGISTER_COUNT];
@@ -169,43 +178,67 @@ conditional_handler(jle, <=)
 conditional_handler(jg,  > )
 conditional_handler(jge, >=)
 
+void execute_print(machine_state* state, instruction* inst)
+{
+    printf("%llu\n", *(u64*)resolve_operand(state, &inst->operands[0]));
+}
+
+void instruction_print(instruction* inst)
+{
+    printf(CLR_GREEN "%s", opcode_to_string(inst->opcode));
+
+    if (inst->size != B8)
+    {
+        printf(" %s", size_to_string(inst->size));
+    }
+
+    int operand_count = operands(inst->opcode);
+    char buffer[DEBUG_STR_LEN];
+
+    for (int i = 0; i < operand_count; i++)
+    {
+        operand_to_string(&inst->operands[i], buffer);
+        printf(" %s", buffer);
+    }
+
+    printf("\n" CLR_RESET);
+}
+
+int read_next_instruction(machine_state* state, instruction* inst)
+{
+    return instruction_decode(state->memory + state->registers[RIP], inst);
+}
+
 bool execute(machine_state* state)
 {
     instruction inst;
-
-    state->registers[RIP] += instruction_decode(
-            state->memory + state->registers[RIP],
-            &inst);
-
-    if (state->debug)
-    {
-        instruction_print(&inst);
-    }
+    state->registers[RIP] += read_next_instruction(state, &inst);
 
     void (*func)(machine_state* state, instruction* inst);
 
     switch (inst.opcode)
     {
-        case OP_JMP:  func = execute_jmp;  break;
-        case OP_PUSH: func = execute_push; break;
-        case OP_POP:  func = execute_pop;  break;
-        case OP_MOV:  func = execute_mov;  break;
-        case OP_CALL: func = execute_call; break;
-        case OP_RET:  func = execute_ret;  break;
-        case OP_ADD:  func = execute_add;  break;
-        case OP_SUB:  func = execute_sub;  break;
-        case OP_MUL:  func = execute_mul;  break;
-        case OP_DIV:  func = execute_div;  break;
-        case OP_MOD:  func = execute_mod;  break;
-        case OP_INC:  func = execute_inc;  break;
-        case OP_DEC:  func = execute_dec;  break;
-        case OP_CMP:  func = execute_cmp;  break;
-        case OP_JE:   func = execute_je;   break;
-        case OP_JNE:  func = execute_jne;  break;
-        case OP_JG:   func = execute_jg;   break;
-        case OP_JGE:  func = execute_jge;  break;
-        case OP_JL:   func = execute_jl;   break;
-        case OP_JLE:  func = execute_jle;  break;
+        case OP_JMP:   func = execute_jmp;   break;
+        case OP_PUSH:  func = execute_push;  break;
+        case OP_POP:   func = execute_pop;   break;
+        case OP_MOV:   func = execute_mov;   break;
+        case OP_CALL:  func = execute_call;  break;
+        case OP_RET:   func = execute_ret;   break;
+        case OP_ADD:   func = execute_add;   break;
+        case OP_SUB:   func = execute_sub;   break;
+        case OP_MUL:   func = execute_mul;   break;
+        case OP_DIV:   func = execute_div;   break;
+        case OP_MOD:   func = execute_mod;   break;
+        case OP_INC:   func = execute_inc;   break;
+        case OP_DEC:   func = execute_dec;   break;
+        case OP_CMP:   func = execute_cmp;   break;
+        case OP_JE:    func = execute_je;    break;
+        case OP_JNE:   func = execute_jne;   break;
+        case OP_JG:    func = execute_jg;    break;
+        case OP_JGE:   func = execute_jge;   break;
+        case OP_JL:    func = execute_jl;    break;
+        case OP_JLE:   func = execute_jle;   break;
+        case OP_PRINT: func = execute_print; break;
 
         case OP_EXIT:
             return false;
@@ -222,12 +255,27 @@ bool execute(machine_state* state)
 
 void print_debug(machine_state* state)
 {
-    printf("  r0: %llu", state->registers[R0]);
-    printf("  r1: %llu", state->registers[R1]);
-    printf("  r2: %llu", state->registers[R2]);
-    printf("  r3: %llu", state->registers[R3]);
-    printf("  r4: %llu", state->registers[R4]);
-    printf("  rflag: %lli", state->registers[RFLAG]);
+    for (int i = 0; i < REGISTER_COUNT; i++)
+    {
+        if (i != RFLAG)
+        {
+            printf("\t%s: " CLR_BLUE "%llu" CLR_RESET,
+               register_to_string(i),
+               state->registers[i]);
+        }
+        else
+        {
+            printf("\t%s: " CLR_BLUE "%lli" CLR_RESET,
+               register_to_string(i),
+               state->registers[i]);
+        }
+
+        if ((i + 1) % 4 == 0 || i == REGISTER_COUNT - 1)
+        {
+            putchar('\n');
+        }
+    }
+
     putchar('\n');
 }
 
@@ -282,25 +330,34 @@ int main(int argc, char* argv[])
         IMG_HDR_LEN + *(u64 *)(state.memory + IMG_HDR_ENTRY_POINT);
     state.registers[RSP] = MEMORY_SIZE;
 
-    while (execute(&state))
+    do
     {
-        if (state.debug)
+        if (!state.debug)
         {
-            print_debug(&state);
-
-            // Debug prompt
-            char* input = NULL;
-            size_t len;
-            int read = getline(&input, &len, stdin);
-
-            if (read != -1)
-            {
-                // handle command
-            }
-
-            free(input);
+            continue;
         }
-    }
+
+        print_debug(&state);
+
+        instruction inst;
+        read_next_instruction(&state, &inst);
+
+        printf(CLR_GREEN);
+        instruction_print(&inst);
+        printf(CLR_RESET);
+
+        // Debug prompt
+        char* input = NULL;
+        size_t len;
+        int read = getline(&input, &len, stdin);
+
+        if (read != -1)
+        {
+            // handle command
+        }
+
+        free(input);
+    } while (execute(&state));
 
     print_debug(&state);
 

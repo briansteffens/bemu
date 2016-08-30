@@ -217,35 +217,6 @@ const char* size_to_string(byte size)
     }
 }
 
-void instruction_print(instruction* inst)
-{
-    printf("%s", opcode_to_string(inst->opcode));
-
-    if (inst->size != B8)
-    {
-        printf(" %s", size_to_string(inst->size));
-    }
-
-    int operand_count = operands(inst->opcode);
-    char buffer[DEBUG_STR_LEN];
-
-    for (int i = 0; i < operand_count; i++)
-    {
-        operand_to_string(&inst->operands[i], buffer);
-        printf(" %s", buffer);
-    }
-
-    putchar('\n');
-}
-
-void vec_instruction_print(vec_instruction* target)
-{
-    for (int i = 0; i < target->len; i++)
-    {
-        instruction_print(&target->items[i]);
-    }
-}
-
 byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read)
 {
     FILE* file = fopen(fn, "r");

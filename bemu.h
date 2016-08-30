@@ -107,10 +107,6 @@ const char* opcode_to_string(byte opcode);
 
 const char* size_to_string(byte size);
 
-void instruction_print(instruction* inst);
-
-void vec_instruction_print(vec_instruction* target);
-
 byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 
 void encode_u64(u64 in, byte* out);
@@ -120,3 +116,5 @@ byte operand_unpack_register(operand* oper);
 int operand_unpack_offset(operand* oper);
 
 void u64_debug_print(u64 in);
+
+const char* register_to_string(byte r);
