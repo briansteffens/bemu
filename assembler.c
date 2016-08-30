@@ -156,7 +156,7 @@ void parse_instructions(
     {
         bstring* line = &lines->items[i];
 
-        if (line->len == 0)
+        if (line->len == 0 || line->data[0] == '#')
         {
             continue;
         }
