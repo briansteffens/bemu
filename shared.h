@@ -96,4 +96,6 @@ int operands(byte opcode);
 
 byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 
+int instruction_encoded_len(int operands);
+
 #endif

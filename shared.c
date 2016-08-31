@@ -80,3 +80,8 @@ byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read)
 
     return out_bytes;
 }
+
+int instruction_encoded_len(int operands)
+{
+    return 8 + operands * 8;
+}

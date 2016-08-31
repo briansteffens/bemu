@@ -174,11 +174,6 @@ bool is_jump(byte opcode)
            opcode == OP_JG || opcode == OP_JGE;
 }
 
-int instruction_encoded_len(int operands)
-{
-    return 8 + operands * 8;
-}
-
 void parse_instructions(
         vec_bstring* lines,
         vec_instruction* instructions,
