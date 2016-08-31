@@ -4,8 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "bstring.h"
-#include "shared.h"
+#include "assembler.h"
 
 typedef struct label
 {
@@ -174,6 +173,33 @@ bool is_jump(byte opcode)
            opcode == OP_JG || opcode == OP_JGE;
 }
 
+vec_bstring parse_instruction_header(bstring* line, instruction* inst)
+{
+    vec_bstring parts = vec_bstring_new();
+    bstring_split(line, " ", &parts);
+
+    inst->opcode = opcode_from_bstring(parts.items[0]);
+    inst->size = B8;
+
+    return parts;
+}
+
+void parse_instruction_operands(vec_bstring* parts, instruction* inst)
+{
+    int operand_count = operands(inst->opcode);
+
+    if (operand_count != parts->len - 1)
+    {
+        printf("Invalid number of operands\n");
+        exit(7);
+    }
+
+    for (int i = 1; i < parts->len; i++)
+    {
+        parse_operand(parts->items[i], inst, i - 1);
+    }
+}
+
 void parse_instructions(
         vec_bstring* lines,
         vec_instruction* instructions,
@@ -186,31 +212,27 @@ void parse_instructions(
     {
         bstring* line = &lines->items[i];
 
+        // Comment
         if (line->len == 0 || line->data[0] == '#')
         {
             continue;
         }
 
-        vec_bstring parts = vec_bstring_new();
-        bstring_split(line, " ", &parts);
-
-        // Label?
-        if (is_label(&parts))
+        // Label
+        if (line->data[line->len - 1] == ':')
         {
             label* lbl = vec_label_add(labels);
 
-            lbl->name.data = parts.items[0].data;
-            lbl->name.len = parts.items[0].len - 1;
+            lbl->name.data = line->data;
+            lbl->name.len = line->len - 1;
 
             lbl->address = offset;
 
-            goto next;
+            continue;
         }
 
         instruction* inst = vec_instruction_add(instructions);
-
-        inst->opcode = opcode_from_bstring(parts.items[0]);
-        inst->size = B8;
+        vec_bstring parts = parse_instruction_header(line, inst);
 
         // Jumps need their labels resolved in a subsequent pass
         if (is_jump(inst->opcode))
@@ -220,27 +242,13 @@ void parse_instructions(
             jmp->inst_index = instructions->len - 1;
             jmp->label_name = bstring_clone(&parts.items[1]);
 
-            goto next_and_offset;
+            goto next;
         }
 
-        int operand_count = operands(inst->opcode);
-
-        if (operand_count != parts.len - 1)
-        {
-            printf("Invalid number of operands\n");
-            exit(7);
-        }
-
-        for (int i = 1; i < parts.len; i++)
-        {
-            parse_operand(parts.items[i], inst, i - 1);
-        }
-
-    next_and_offset:
-        offset += instruction_encoded_len(operands(inst->opcode));
+        parse_instruction_operands(&parts, inst);
 
     next:
-        free(parts.items);
+        offset += instruction_encoded_len(operands(inst->opcode));
     }
 }
 
@@ -369,28 +377,4 @@ byte* assemble(bstring* raw, int* out_bytes_count)
 
     *out_bytes_count = IMG_HDR_LEN + code_bytes;
     return bytes;
-}
-
-int main(int argc, char* argv[])
-{
-    if (argc != 2)
-    {
-        printf("Usage: basm <source_file>\n");
-        return 1;
-    }
-
-    bstring raw;
-    raw.data = NULL;
-    raw.data = read_file(argv[1], NULL, &raw.len);
-
-    int bytes_len = 0;
-    byte* bytes = assemble(&raw, &bytes_len);
-
-    free(raw.data);
-
-    write_to_file(bytes, bytes_len, "b.out");
-
-    free(bytes);
-
-    return 0;
 }

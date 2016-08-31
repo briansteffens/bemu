@@ -27,15 +27,19 @@ obj/bemu.o: dirs
 obj/bdbg.o: dirs
 	gcc $(FLAGS) -c bdbg.c -o obj/bdbg.o
 
-bin/basm: obj/assembler.o obj/shared.o obj/bstring.o
-	gcc $(FLAGS) obj/assembler.o obj/shared.o obj/bstring.o -o bin/basm
+obj/basm.o: dirs
+	gcc $(FLAGS) -c basm.c -o obj/basm.o
+
+bin/basm: obj/assembler.o obj/shared.o obj/bstring.o obj/basm.o
+	gcc $(FLAGS) obj/basm.o obj/assembler.o obj/shared.o obj/bstring.o \
+		-o bin/basm
 
 bin/bemu: obj/bemu.o obj/emulator.o obj/shared.o
 	gcc $(FLAGS) obj/bemu.o obj/emulator.o obj/shared.o -o bin/bemu
 
 bin/bdbg: obj/bdbg.o obj/emulator.o obj/shared.o obj/disassembler.o
 	gcc $(FLAGS) obj/bdbg.o obj/emulator.o obj/shared.o obj/disassembler.o \
-		-o bin/bdbg
+		obj/assembler.o obj/bstring.o -o bin/bdbg
 
 build: bin/basm bin/bemu bin/bdbg
 

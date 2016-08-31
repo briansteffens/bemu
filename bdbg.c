@@ -1,6 +1,8 @@
 #include <string.h>
 
+#include "bstring.h"
 #include "emulator.h"
+#include "assembler.h"
 #include "disassembler.h"
 
 #define CLR_RESET   "\x1B[0m"
@@ -81,6 +83,16 @@ void instruction_bytecode_print(instruction* inst)
     printf(CLR_RESET "\n");
 }
 
+bool run_console_instruction(machine_state* state, bstring* line)
+{
+    bstring_trim(line);
+    instruction inst;
+    vec_bstring parts = parse_instruction_header(line, &inst);
+    parse_instruction_operands(&parts, &inst);
+
+    return execute_instruction(state, &inst);
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -128,6 +140,14 @@ int main(int argc, char* argv[])
 
             if (input[0] == '$')
             {
+                bstring binput = bstring_from_char(input + 1);
+
+                if (!run_console_instruction(&state, &binput))
+                {
+                    break;
+                }
+
+                continue;
             }
         }
 

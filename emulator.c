@@ -198,11 +198,8 @@ int read_next_instruction(machine_state* state, instruction** inst)
     return operands((*inst)->opcode) * sizeof(u64) + 8;
 }
 
-bool execute(machine_state* state)
+bool execute_instruction(machine_state* state, instruction* inst)
 {
-    instruction* inst;
-    state->registers[RIP] += read_next_instruction(state, &inst);
-
     void (*func)(machine_state* state, instruction* inst);
 
     switch (inst->opcode)
@@ -240,6 +237,13 @@ bool execute(machine_state* state)
     func(state, inst);
 
     return true;
+}
+
+bool execute(machine_state* state)
+{
+    instruction* inst;
+    state->registers[RIP] += read_next_instruction(state, &inst);
+    return execute_instruction(state, inst);
 }
 
 void load_binary(const char* fn, machine_state* state)
