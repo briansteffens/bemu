@@ -1,3 +1,5 @@
 b.out
 bin
 obj
+gmon.out
+o*

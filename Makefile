@@ -7,28 +7,28 @@ dirs:
 	mkdir -p obj bin
 
 obj/bstring.o: dirs
-	gcc $(FLAGS) -c bstring.c -o obj/bstring.o
+	gcc $(FLAGS) -c src/bstring.c -o obj/bstring.o
 
 obj/shared.o: dirs
-	gcc $(FLAGS) -c shared.c -o obj/shared.o
+	gcc $(FLAGS) -c src/shared.c -o obj/shared.o
 
 obj/assembler.o: dirs
-	gcc $(FLAGS) -c assembler.c -o obj/assembler.o
+	gcc $(FLAGS) -c src/assembler.c -o obj/assembler.o
 
 obj/disassembler.o: dirs
-	gcc $(FLAGS) -c disassembler.c -o obj/disassembler.o
+	gcc $(FLAGS) -c src/disassembler.c -o obj/disassembler.o
 
 obj/emulator.o: dirs
-	gcc $(FLAGS) -c emulator.c -o obj/emulator.o
+	gcc $(FLAGS) -c src/emulator.c -o obj/emulator.o
 
 obj/bemu.o: dirs
-	gcc $(FLAGS) -c bemu.c -o obj/bemu.o
+	gcc $(FLAGS) -c src/bemu.c -o obj/bemu.o
 
 obj/bdbg.o: dirs
-	gcc $(FLAGS) -c bdbg.c -o obj/bdbg.o
+	gcc $(FLAGS) -c src/bdbg.c -o obj/bdbg.o
 
 obj/basm.o: dirs
-	gcc $(FLAGS) -c basm.c -o obj/basm.o
+	gcc $(FLAGS) -c src/basm.c -o obj/basm.o
 
 bin/basm: obj/assembler.o obj/shared.o obj/bstring.o obj/basm.o
 	gcc $(FLAGS) obj/basm.o obj/assembler.o obj/shared.o obj/bstring.o \
