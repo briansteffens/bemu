@@ -1,27 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <malloc.h>
 #include <string.h>
 
-#include "bemu.h"
-
-#define MEMORY_SIZE 32 * 1024 * 1024
-
-#define CLR_RESET   "\x1B[0m"
-#define CLR_RED     "\x1B[31m"
-#define CLR_GREEN   "\x1B[32m"
-#define CLR_YELLOW  "\x1B[33m"
-#define CLR_BLUE    "\x1B[34m"
-#define CLR_MAGENTA "\x1B[35m"
-#define CLR_CYAN    "\x1B[36m"
-#define CLR_WHITE   "\x1B[37m"
-
-typedef struct
-{
-    u64 registers[REGISTER_COUNT];
-    byte* memory;
-    bool debug;
-} machine_state;
+#include "emulator.h"
 
 byte* resolve_operand(machine_state* state, instruction* inst, int ordinal)
 {
@@ -204,30 +185,11 @@ void execute_print(machine_state* state, instruction* inst)
     printf("%llu\n", *(u64*)resolve_operand(state, inst, 0));
 }
 
-void instruction_print(instruction* inst)
-{
-    printf(CLR_GREEN "%s", opcode_to_string(inst->opcode));
-
-    if (inst->size != B8)
-    {
-        printf(" %s", size_to_string(inst->size));
-    }
-
-    int operand_count = operands(inst->opcode);
-    char buffer[DEBUG_STR_LEN];
-
-    for (int i = 0; i < operand_count; i++)
-    {
-        operand_to_string(inst, i, buffer);
-        printf(" %s", buffer);
-    }
-
-    printf("\n" CLR_RESET);
-}
-
 int read_next_instruction(machine_state* state, instruction** inst)
 {
-    return instruction_decode(state->memory + state->registers[RIP], inst);
+    *inst = (instruction*)(state->memory + state->registers[RIP]);
+
+    return operands((*inst)->opcode) * sizeof(u64) + 8;
 }
 
 bool execute(machine_state* state)
@@ -274,118 +236,24 @@ bool execute(machine_state* state)
     return true;
 }
 
-void print_debug(machine_state* state)
+void load_binary(const char* fn, machine_state* state)
 {
-    for (int i = 1; i < REGISTER_COUNT; i++)
-    {
-        if (i != RFLAG)
-        {
-            printf("\t%s: " CLR_BLUE "%llu" CLR_RESET,
-               register_to_string(i),
-               state->registers[i]);
-        }
-        else
-        {
-            printf("\t%s: " CLR_BLUE "%lli" CLR_RESET,
-               register_to_string(i),
-               state->registers[i]);
-        }
+    state->memory = malloc(sizeof(byte) * MEMORY_SIZE);
 
-        if ((i + 1) % 4 == 0 || i == REGISTER_COUNT - 1)
-        {
-            putchar('\n');
-        }
-    }
-
-    putchar('\n');
-}
-
-int print_usage()
-{
-    printf("Usage: bvm <binary_file> [--debug]\n");
-    return 1;
-}
-
-int main(int argc, char* argv[])
-{
-    if (argc < 2)
-    {
-        return print_usage();
-    }
-
-    machine_state state;
-
-    state.debug = false;
-    char* filename = NULL;
-
-    for (int i = 1; i < argc; i++)
-    {
-        if (strncmp(argv[i], "--debug", 255) == 0)
-        {
-            state.debug = true;
-            continue;
-        }
-
-        if (filename != NULL)
-        {
-            return print_usage();
-        }
-
-        filename = argv[i];
-    }
-
-    state.memory = malloc(sizeof(byte) * MEMORY_SIZE);
     int bytes_count;
-    read_file(filename, state.memory, &bytes_count);
+    read_file(fn, state->memory, &bytes_count);
 
     // Clear registers
     for (int i = 0; i < REGISTER_COUNT; i++)
     {
-        state.registers[i] = 0;
+        state->registers[i] = 0;
     }
 
     // Align rmem on 8-byte boundary after image
-    state.registers[RMEM] = bytes_count + 8 - bytes_count % 8;
+    state->registers[RMEM] = bytes_count + 8 - bytes_count % 8;
 
-    state.registers[RIP] =
-        IMG_HDR_LEN + *(u64 *)(state.memory + IMG_HDR_ENTRY_POINT);
-    state.registers[RSP] = MEMORY_SIZE;
+    state->registers[RIP] =
+        IMG_HDR_LEN + *(u64 *)(state->memory + IMG_HDR_ENTRY_POINT);
 
-    do
-    {
-        if (!state.debug)
-        {
-            continue;
-        }
-
-        print_debug(&state);
-
-        instruction* inst;
-        read_next_instruction(&state, &inst);
-
-        printf(CLR_GREEN);
-        instruction_print(inst);
-        printf(CLR_RESET);
-
-        // Debug prompt
-        char* input = NULL;
-        size_t len;
-        int read = getline(&input, &len, stdin);
-
-        if (read != -1)
-        {
-            // handle command
-        }
-
-        free(input);
-    } while (execute(&state));
-
-    if (state.debug)
-    {
-        print_debug(&state);
-    }
-
-    free(state.memory);
-
-    return 0;
+    state->registers[RSP] = MEMORY_SIZE;
 }

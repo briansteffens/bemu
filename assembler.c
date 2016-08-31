@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 #include "bstring.h"
-#include "bemu.h"
+#include "shared.h"
 
 typedef struct label
 {
@@ -332,6 +332,14 @@ void write_to_file(byte* bytes, int count, const char* filename)
     }
 
     fclose(file);
+}
+
+void encode_u64(u64 in, byte* out)
+{
+    for (int shift = 0; shift <= 56; shift += 8)
+    {
+        *(out++) = (in >> shift) & 0xff;
+    }
 }
 
 byte* assemble(bstring* raw, int* out_bytes_count)

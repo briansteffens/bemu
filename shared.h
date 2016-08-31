@@ -1,4 +1,5 @@
-#include <stdbool.h>
+#ifndef _SHARED_H
+#define _SHARED_H
 
 #include "vector.h"
 
@@ -93,18 +94,6 @@ VECTOR_H(instruction);
 
 int operands(byte opcode);
 
-int instruction_decode(byte* in, instruction** out);
-
-void operand_to_string(instruction* inst, int operand_ordinal, char* out);
-
-const char* opcode_to_string(byte opcode);
-
-const char* size_to_string(byte size);
-
 byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 
-void encode_u64(u64 in, byte* out);
-
-void u64_debug_print(u64 in);
-
-const char* register_to_string(byte r);
+#endif
