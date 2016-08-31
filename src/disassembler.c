@@ -21,7 +21,7 @@ void operand_to_string(instruction* inst, int ordinal, char* out)
 
         out += snprintf(out, 32, "%s", register_to_string(comp->base));
 
-        if (comp->multiplier > 0)
+        if (comp->multiplier != 1)
         {
             out += snprintf(out, 4, "*%d", comp->multiplier);
         }
