@@ -12,27 +12,25 @@
 #define CLR_CYAN    "\x1B[36m"
 #define CLR_WHITE   "\x1B[37m"
 
+u64 registers_last[REGISTER_COUNT];
+
 void print_debug(machine_state* state)
 {
-    for (int i = 1; i < REGISTER_COUNT; i++)
+    for (int i = 0; i < REGISTER_COUNT; i++)
     {
-        if (i != RFLAG)
-        {
-            printf("\t%s: " CLR_BLUE "%llu" CLR_RESET,
-               register_to_string(i),
-               state->registers[i]);
-        }
-        else
-        {
-            printf("\t%s: " CLR_BLUE "%lli" CLR_RESET,
-               register_to_string(i),
-               state->registers[i]);
-        }
+        const bool changed = registers_last[i] != state->registers[i];
+
+        printf("\t%s: ", register_to_string(i));
+        printf(changed ? CLR_RED : CLR_BLUE);
+        printf(i != RFLAG ? "%llu" : "%lli", state->registers[i]);
+        printf(CLR_RESET);
 
         if ((i + 1) % 4 == 0 || i == REGISTER_COUNT - 1)
         {
             putchar('\n');
         }
+
+        registers_last[i] = state->registers[i];
     }
 
     putchar('\n');
@@ -66,6 +64,9 @@ int main(int argc, char* argv[])
         printf("Usage: bdbg <binary_file>\n");
         return 1;
     }
+
+    print_prefix = CLR_YELLOW;
+    print_suffix = CLR_RESET;
 
     machine_state state;
     load_binary(argv[1], &state);

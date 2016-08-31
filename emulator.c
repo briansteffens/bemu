@@ -4,6 +4,9 @@
 
 #include "emulator.h"
 
+char* print_prefix = "";
+char* print_suffix = "";
+
 byte* resolve_operand(machine_state* state, instruction* inst, int ordinal)
 {
     byte type = inst->operand_types[ordinal];
@@ -182,7 +185,10 @@ conditional_handler(jge, >=)
 
 void execute_print(machine_state* state, instruction* inst)
 {
-    printf("%llu\n", *(u64*)resolve_operand(state, inst, 0));
+    printf("%s%llu%s\n",
+           print_prefix,
+           *(u64*)resolve_operand(state, inst, 0),
+           print_suffix);
 }
 
 int read_next_instruction(machine_state* state, instruction** inst)

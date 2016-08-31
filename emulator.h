@@ -8,6 +8,9 @@ typedef struct
     byte* memory;
 } machine_state;
 
+extern char* print_prefix;
+extern char* print_suffix;
+
 int read_next_instruction(machine_state* state, instruction** inst);
 
 bool execute(machine_state* state);
