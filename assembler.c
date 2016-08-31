@@ -106,7 +106,7 @@ void parse_operand(bstring in, instruction* inst, int ordinal)
         complex_operand* comp = (complex_operand*)data;
 
         comp->base = register_from_bstring(sections.items[0]);
-        comp->multiplier = 0;
+        comp->multiplier = 1;
         comp->register2_sign = 0;
         comp->register2 = 0;
         comp->offset = 0;
@@ -138,7 +138,7 @@ void parse_operand(bstring in, instruction* inst, int ordinal)
             }
         }
 
-        if (comp->multiplier != 0 || comp->register2_sign != 0 ||
+        if (comp->multiplier != 1 || comp->register2_sign != 0 ||
             comp->offset != 0)
         {
             *type |= COMPLEX;
@@ -186,9 +186,7 @@ vec_bstring parse_instruction_header(bstring* line, instruction* inst)
 
 void parse_instruction_operands(vec_bstring* parts, instruction* inst)
 {
-    int operand_count = operands(inst->opcode);
-
-    if (operand_count != parts->len - 1)
+    if (operands[inst->opcode] != parts->len - 1)
     {
         printf("Invalid number of operands\n");
         exit(7);
@@ -248,7 +246,7 @@ void parse_instructions(
         parse_instruction_operands(&parts, inst);
 
     next:
-        offset += instruction_encoded_len(operands(inst->opcode));
+        offset += instruction_encoded_len(operands[inst->opcode]);
     }
 }
 
@@ -301,7 +299,7 @@ int encode(
     for (int i = 0; i < instructions->len; i++)
     {
         int len = instruction_encoded_len(
-                operands(instructions->items[i].opcode));
+                operands[instructions->items[i].opcode]);
         memcpy(out, &instructions->items[i], len);
         out += len;
     }

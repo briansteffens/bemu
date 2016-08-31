@@ -13,6 +13,8 @@ extern char* print_suffix;
 
 int read_next_instruction(machine_state* state, instruction** inst);
 
+void emulator_init();
+
 bool execute(machine_state* state);
 bool execute_instruction(machine_state* state, instruction* inst);
 

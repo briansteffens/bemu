@@ -10,8 +10,12 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    operands_init();
+
     machine_state state;
     load_binary(argv[1], &state);
+
+    emulator_init();
 
     while (execute(&state)) { }
 

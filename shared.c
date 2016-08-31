@@ -6,43 +6,34 @@
 
 VECTOR_C(instruction);
 
-int operands(byte opcode)
+int operands[OPCODE_COUNT];
+
+void operands_init()
 {
-    // TODO
-    switch (opcode)
-    {
-        case OP_MOV:
-        case OP_ADD:
-        case OP_SUB:
-        case OP_MUL:
-        case OP_DIV:
-        case OP_MOD:
-        case OP_CMP:
-            return 2;
+    operands[OP_MOV]   = 2;
+    operands[OP_ADD]   = 2;
+    operands[OP_SUB]   = 2;
+    operands[OP_MUL]   = 2;
+    operands[OP_DIV]   = 2;
+    operands[OP_MOD]   = 2;
+    operands[OP_CMP]   = 2;
 
-        case OP_PUSH:
-        case OP_POP:
-        case OP_JMP:
-        case OP_CALL:
-        case OP_INC:
-        case OP_DEC:
-        case OP_JE:
-        case OP_JNE:
-        case OP_JL:
-        case OP_JG:
-        case OP_JLE:
-        case OP_JGE:
-        case OP_PRINT:
-            return 1;
+    operands[OP_PUSH]  = 1;
+    operands[OP_POP]   = 1;
+    operands[OP_JMP]   = 1;
+    operands[OP_CALL]  = 1;
+    operands[OP_INC]   = 1;
+    operands[OP_DEC]   = 1;
+    operands[OP_JE]    = 1;
+    operands[OP_JNE]   = 1;
+    operands[OP_JL]    = 1;
+    operands[OP_JG]    = 1;
+    operands[OP_JLE]   = 1;
+    operands[OP_JGE]   = 1;
+    operands[OP_PRINT] = 1;
 
-        case OP_EXIT:
-        case OP_RET:
-            return 0;
-
-        default:
-            printf("Unrecognized opcode\n");
-            exit(4);
-    }
+    operands[OP_EXIT]  = 0;
+    operands[OP_RET]   = 0;
 }
 
 byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read)

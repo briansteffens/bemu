@@ -50,7 +50,7 @@ void instruction_print(instruction* inst)
         printf(" %s", size_to_string(inst->size));
     }
 
-    int operand_count = operands(inst->opcode);
+    int operand_count = operands[inst->opcode];
     char buffer[DEBUG_STR_LEN];
 
     for (int i = 0; i < operand_count; i++)
@@ -66,7 +66,7 @@ void instruction_bytecode_print(instruction* inst)
 {
     byte* raw = (byte*)inst;
 
-    int operand_count = operands(inst->opcode);
+    int operand_count = operands[inst->opcode];
 
     printf(CLR_DIM);
 
@@ -104,8 +104,12 @@ int main(int argc, char* argv[])
     print_prefix = CLR_YELLOW;
     print_suffix = CLR_RESET;
 
+    operands_init();
+
     machine_state state;
     load_binary(argv[1], &state);
+
+    emulator_init();
 
     while (true)
     {

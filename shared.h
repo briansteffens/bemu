@@ -11,6 +11,7 @@
 
 #define REGISTER_COUNT 10
 #define MAX_OPERANDS 2
+#define OPCODE_COUNT 22
 
 typedef unsigned long long u64;
 typedef long long i64;
@@ -92,7 +93,8 @@ typedef struct
 
 VECTOR_H(instruction);
 
-int operands(byte opcode);
+void operands_init();
+extern int operands[];
 
 byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 
