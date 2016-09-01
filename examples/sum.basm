@@ -1,0 +1,16 @@
+start:
+    mov r0 0
+    mov r1 1
+
+loop_start:
+    cmp r1 100
+    jg loop_end
+
+    add r0 r1
+
+    inc r1
+    jmp loop_start
+
+loop_end:
+    print r0
+    exit
