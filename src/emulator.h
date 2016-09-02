@@ -4,8 +4,8 @@
 
 typedef struct
 {
-    u64 registers[REGISTER_COUNT];
-    byte* memory;
+    uint64_t registers[REGISTER_COUNT];
+    unsigned char* memory;
 } machine_state;
 
 extern char* print_prefix;

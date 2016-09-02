@@ -1,6 +1,7 @@
 #ifndef _SHARED_H
 #define _SHARED_H
 
+#include <stdint.h>
 #include "vector.h"
 
 #define DEBUG_STR_LEN 255
@@ -12,10 +13,6 @@
 #define REGISTER_COUNT 10
 #define MAX_OPERANDS 2
 #define OPCODE_COUNT 22
-
-typedef unsigned long long u64;
-typedef long long i64;
-typedef unsigned char byte;
 
 enum opcodes
 {
@@ -76,10 +73,10 @@ enum operand_type
 
 typedef struct instruction
 {
-    byte opcode;
-    byte size;
-    byte operand_types[MAX_OPERANDS];
-    u64 operands[MAX_OPERANDS];
+    unsigned char opcode;
+    unsigned char size;
+    unsigned char operand_types[MAX_OPERANDS];
+    uint64_t operands[MAX_OPERANDS];
 } instruction;
 
 typedef struct
@@ -96,11 +93,14 @@ VECTOR_H(instruction);
 void operands_init();
 extern int operands[];
 
-byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
+unsigned char* read_file(
+        const char* fn,
+        unsigned char* out_bytes,
+        int* out_bytes_read);
 
 int instruction_encoded_len(int operands);
 
-bool is_jump(byte opcode);
-bool is_conditional_jump(byte opcode);
+bool is_jump(unsigned char opcode);
+bool is_conditional_jump(unsigned char opcode);
 
 #endif

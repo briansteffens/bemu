@@ -36,7 +36,10 @@ void operands_init()
     operands[OP_RET]   = 0;
 }
 
-byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read)
+unsigned char* read_file(
+        const char* fn,
+        unsigned char* out_bytes,
+        int* out_bytes_read)
 {
     FILE* file = fopen(fn, "r");
 
@@ -56,7 +59,7 @@ byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read)
 
     if (out_bytes == NULL)
     {
-        out_bytes = malloc(sizeof(byte) * file_stat.st_size);
+        out_bytes = malloc(sizeof(unsigned char) * file_stat.st_size);
     }
 
     if (!fread(out_bytes, file_stat.st_size, 1, file))
@@ -77,12 +80,12 @@ int instruction_encoded_len(int operands)
     return 8 + operands * 8;
 }
 
-bool is_jump(byte opcode)
+bool is_jump(unsigned char opcode)
 {
     return opcode == OP_JMP || is_conditional_jump(opcode);
 }
 
-bool is_conditional_jump(byte opcode)
+bool is_conditional_jump(unsigned char opcode)
 {
     return opcode == OP_JE || opcode == OP_JNE ||
            opcode == OP_JL || opcode == OP_JLE ||

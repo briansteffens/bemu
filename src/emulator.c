@@ -9,20 +9,23 @@ bool (*opcode_handlers[OPCODE_COUNT])(machine_state* state, instruction* inst);
 char* print_prefix = "";
 char* print_suffix = "";
 
-byte* resolve_operand(machine_state* state, instruction* inst, int ordinal)
+unsigned char* resolve_operand(
+        machine_state* state,
+        instruction* inst,
+        int ordinal)
 {
-    byte type = inst->operand_types[ordinal];
+    unsigned char type = inst->operand_types[ordinal];
     complex_operand* comp = (complex_operand*)&inst->operands[ordinal];
 
     if (type & COMPLEX)
     {
-        u64 addr = state->registers[comp->base];
+        uint64_t addr = state->registers[comp->base];
 
         addr *= comp->multiplier;
 
         if (comp->register2_sign != 0)
         {
-            u64 register2_val = state->registers[comp->register2];
+            uint64_t register2_val = state->registers[comp->register2];
 
             if (comp->register2_sign)
             {
@@ -39,7 +42,7 @@ byte* resolve_operand(machine_state* state, instruction* inst, int ordinal)
         return &state->memory[addr];
     }
 
-    u64* ret = NULL;
+    uint64_t* ret = NULL;
 
     if (type & IMMEDIATE)
     {
@@ -56,11 +59,11 @@ byte* resolve_operand(machine_state* state, instruction* inst, int ordinal)
     }
     else
     {
-        return (byte*)ret;
+        return (unsigned char*)ret;
     }
 }
 
-bool push(machine_state* state, byte* data, byte size)
+bool push(machine_state* state, unsigned char* data, unsigned char size)
 {
     state->registers[RSP] -= size;
 
@@ -69,7 +72,7 @@ bool push(machine_state* state, byte* data, byte size)
     return true;
 }
 
-bool pop(machine_state* state, byte* target, byte size)
+bool pop(machine_state* state, unsigned char* target, unsigned char size)
 {
     memcpy(target, state->memory + state->registers[RSP], size);
 
@@ -81,7 +84,7 @@ bool pop(machine_state* state, byte* target, byte size)
 bool jump(machine_state* state, instruction* inst)
 {
     state->registers[RIP] =
-        IMG_HDR_LEN + *(u64*)resolve_operand(state, inst, 0);
+        IMG_HDR_LEN + *(uint64_t*)resolve_operand(state, inst, 0);
 
     return true;
 }
@@ -118,7 +121,7 @@ bool execute_mov(machine_state* state, instruction* inst)
 
 bool execute_call(machine_state* state, instruction* inst)
 {
-    push(state, (byte*)&state->registers[RIP], B8);
+    push(state, (unsigned char*)&state->registers[RIP], B8);
     execute_jmp(state, inst);
 
     return true;
@@ -126,7 +129,7 @@ bool execute_call(machine_state* state, instruction* inst)
 
 bool execute_ret(machine_state* state, instruction* inst)
 {
-    pop(state, (byte*)&state->registers[RIP], B8);
+    pop(state, (unsigned char*)&state->registers[RIP], B8);
 
     return true;
 }
@@ -134,17 +137,17 @@ bool execute_ret(machine_state* state, instruction* inst)
 void basic_math(
         machine_state* state,
         instruction* inst,
-        u64 (*handler)(u64, u64))
+        uint64_t (*handler)(uint64_t, uint64_t))
 {
-    byte* target = resolve_operand(state, inst, 0);
-    u64 left = *(u64*)target;
-    u64 right = *(u64*)resolve_operand(state, inst, 1);
-    u64 result = handler(left, right);
+    unsigned char* target = resolve_operand(state, inst, 0);
+    uint64_t left = *(uint64_t*)target;
+    uint64_t right = *(uint64_t*)resolve_operand(state, inst, 1);
+    uint64_t result = handler(left, right);
     memcpy(target, &result, inst->size);
 }
 
 #define math_handler(name, op)                                                \
-    u64 math_handler_##name(u64 left, u64 right)                              \
+    uint64_t math_handler_##name(uint64_t left, uint64_t right)               \
     {                                                                         \
         return left op right;                                                 \
     }                                                                         \
@@ -162,8 +165,8 @@ math_handler(mod, %)
 
 bool execute_inc(machine_state* state, instruction* inst)
 {
-    byte* target = resolve_operand(state, inst, 0);
-    u64 result = ++*(u64*)target;
+    unsigned char* target = resolve_operand(state, inst, 0);
+    uint64_t result = ++*(uint64_t*)target;
     memcpy(target, &result, inst->size);
 
     return true;
@@ -171,8 +174,8 @@ bool execute_inc(machine_state* state, instruction* inst)
 
 bool execute_dec(machine_state* state, instruction* inst)
 {
-    byte* target = resolve_operand(state, inst, 0);
-    u64 result = --*(u64*)target;
+    unsigned char* target = resolve_operand(state, inst, 0);
+    uint64_t result = --*(uint64_t*)target;
     memcpy(target, &result, inst->size);
 
     return true;
@@ -180,9 +183,9 @@ bool execute_dec(machine_state* state, instruction* inst)
 
 bool execute_cmp(machine_state* state, instruction* inst)
 {
-    u64 left = *(u64*)resolve_operand(state, inst, 0);
-    u64 right = *(u64*)resolve_operand(state, inst, 1);
-    u64 result = left - right;
+    uint64_t left = *(uint64_t*)resolve_operand(state, inst, 0);
+    uint64_t right = *(uint64_t*)resolve_operand(state, inst, 1);
+    uint64_t result = left - right;
     memcpy(&state->registers[RFLAG], &result, inst->size);
 
     return true;
@@ -191,7 +194,7 @@ bool execute_cmp(machine_state* state, instruction* inst)
 #define conditional_handler(name, cmp)                                        \
     bool execute_##name(machine_state* state, instruction* inst)              \
     {                                                                         \
-        if ((i64)state->registers[RFLAG] cmp 0)                               \
+        if ((int64_t)state->registers[RFLAG] cmp 0)                           \
         {                                                                     \
             jump(state, inst);                                                \
         }                                                                     \
@@ -209,7 +212,7 @@ bool execute_print(machine_state* state, instruction* inst)
 {
     printf("%s%llu%s\n",
            print_prefix,
-           *(u64*)resolve_operand(state, inst, 0),
+           *(uint64_t*)resolve_operand(state, inst, 0),
            print_suffix);
 
     return true;
@@ -224,7 +227,7 @@ int read_next_instruction(machine_state* state, instruction** inst)
 {
     *inst = (instruction*)(state->memory + state->registers[RIP]);
 
-    return operands[(*inst)->opcode] * sizeof(u64) + 8;
+    return operands[(*inst)->opcode] * sizeof(uint64_t) + 8;
 }
 
 void emulator_init()
@@ -267,7 +270,7 @@ bool execute(machine_state* state)
 
 void load_binary(const char* fn, machine_state* state)
 {
-    state->memory = malloc(sizeof(byte) * MEMORY_SIZE);
+    state->memory = malloc(sizeof(unsigned char) * MEMORY_SIZE);
 
     int bytes_count;
     read_file(fn, state->memory, &bytes_count);
@@ -282,7 +285,7 @@ void load_binary(const char* fn, machine_state* state)
     state->registers[RMEM] = bytes_count + 8 - bytes_count % 8;
 
     state->registers[RIP] =
-        IMG_HDR_LEN + *(u64 *)(state->memory + IMG_HDR_ENTRY_POINT);
+        IMG_HDR_LEN + *(uint64_t *)(state->memory + IMG_HDR_ENTRY_POINT);
 
     state->registers[RSP] = MEMORY_SIZE;
 }

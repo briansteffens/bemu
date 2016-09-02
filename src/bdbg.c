@@ -18,11 +18,11 @@
 
 #define MAX_PROMPT_LEN 255
 
-u64 registers_last[REGISTER_COUNT];
+uint64_t registers_last[REGISTER_COUNT];
 
 bool will_jump(machine_state* state, instruction* inst)
 {
-    i64 rflag = state->registers[RFLAG];
+    int64_t rflag = state->registers[RFLAG];
 
     switch (inst->opcode)
     {
@@ -88,7 +88,7 @@ void instruction_print(machine_state* state, instruction* inst)
 
 void instruction_bytecode_print(instruction* inst)
 {
-    byte* raw = (byte*)inst;
+    unsigned char* raw = (unsigned char*)inst;
 
     int operand_count = operands[inst->opcode];
 

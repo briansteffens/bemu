@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     raw.data = read_file(argv[1], NULL, &raw.len);
 
     int bytes_len = 0;
-    byte* bytes = assemble(&raw, &bytes_len);
+    unsigned char* bytes = assemble(&raw, &bytes_len);
 
     free(raw.data);
 

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <malloc.h>
-#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -24,7 +23,7 @@ typedef struct jump
 VECTOR_H(jump)
 VECTOR_C(jump)
 
-byte opcode_from_bstring(bstring src)
+unsigned char opcode_from_bstring(bstring src)
 {
     if      (bstring_cmp(src, bstring_from_char("push")))  { return OP_PUSH;  }
     else if (bstring_cmp(src, bstring_from_char("pop")))   { return OP_POP;   }
@@ -53,7 +52,7 @@ byte opcode_from_bstring(bstring src)
     exit(6);
 }
 
-byte register_from_bstring(bstring src)
+unsigned char register_from_bstring(bstring src)
 {
     if      (bstring_cmp(src, bstring_from_char("r0")))   { return R0;  }
     else if (bstring_cmp(src, bstring_from_char("r1")))   { return R1;  }
@@ -80,10 +79,10 @@ int bstring_to_int(bstring* in)
 
 void parse_operand(bstring in, instruction* inst, int ordinal)
 {
-    byte* type = &inst->operand_types[ordinal];
+    unsigned char* type = &inst->operand_types[ordinal];
     *type = 0;
 
-    u64* data = &inst->operands[ordinal];
+    uint64_t* data = &inst->operands[ordinal];
 
     if (*in.data == '[' && *(in.data + in.len - 1) == ']')
     {
@@ -282,9 +281,9 @@ void resolve_jumps(
 int encode(
         vec_instruction* instructions,
         vec_label* labels,
-        byte* bytes)
+        unsigned char* bytes)
 {
-    byte* out = bytes;
+    unsigned char* out = bytes;
 
     int next_label_index = 0;
     label* next_label = NULL;
@@ -307,7 +306,7 @@ int get_entry_point(vec_label* labels)
     return start ? start->address : 0;
 }
 
-void write_to_file(byte* bytes, int count, const char* filename)
+void write_to_file(unsigned char* bytes, int count, const char* filename)
 {
     FILE* file = fopen(filename, "w");
 
@@ -328,7 +327,7 @@ void write_to_file(byte* bytes, int count, const char* filename)
     fclose(file);
 }
 
-void encode_u64(u64 in, byte* out)
+void encode_uint64_t(uint64_t in, unsigned char* out)
 {
     for (int shift = 0; shift <= 56; shift += 8)
     {
@@ -336,7 +335,7 @@ void encode_u64(u64 in, byte* out)
     }
 }
 
-byte* assemble(bstring* raw, int* out_bytes_count)
+unsigned char* assemble(bstring* raw, int* out_bytes_count)
 {
     vec_bstring lines = vec_bstring_new();
     bstring_split(raw, "\n", &lines);
@@ -351,15 +350,15 @@ byte* assemble(bstring* raw, int* out_bytes_count)
 
     resolve_jumps(&instructions, &labels, &jumps);
 
-    byte* bytes = malloc(sizeof(byte) *
+    unsigned char* bytes = malloc(sizeof(unsigned char) *
             IMG_HDR_LEN + sizeof(instruction) * instructions.len);
 
-    u64 code_bytes = encode(&instructions, &labels, bytes + IMG_HDR_LEN);
+    uint64_t code_bytes = encode(&instructions, &labels, bytes + IMG_HDR_LEN);
 
-    u64 entry_point = get_entry_point(&labels);
+    uint64_t entry_point = get_entry_point(&labels);
 
-    encode_u64(code_bytes, bytes + IMG_HDR_CODE_BYTES);
-    encode_u64(entry_point, bytes + IMG_HDR_ENTRY_POINT);
+    encode_uint64_t(code_bytes, bytes + IMG_HDR_CODE_BYTES);
+    encode_uint64_t(entry_point, bytes + IMG_HDR_ENTRY_POINT);
 
     free(jumps.items);
     free(labels.items);

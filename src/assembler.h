@@ -8,8 +8,8 @@ vec_bstring parse_instruction_header(bstring* line, instruction* inst);
 
 void parse_instruction_operands(vec_bstring* parts, instruction* inst);
 
-byte* assemble(bstring* raw, int* out_bytes_count);
+unsigned char* assemble(bstring* raw, int* out_bytes_count);
 
-void write_to_file(byte* bytes, int count, const char* filename);
+void write_to_file(unsigned char* bytes, int count, const char* filename);
 
 #endif
