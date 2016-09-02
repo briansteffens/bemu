@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 
 #include "bstring.h"
@@ -18,6 +19,24 @@
 #define MAX_PROMPT_LEN 255
 
 u64 registers_last[REGISTER_COUNT];
+
+bool will_jump(machine_state* state, instruction* inst)
+{
+    i64 rflag = state->registers[RFLAG];
+
+    switch (inst->opcode)
+    {
+        case OP_JE:  return rflag == 0;
+        case OP_JNE: return rflag != 0;
+        case OP_JL:  return rflag <  0;
+        case OP_JLE: return rflag <= 0;
+        case OP_JG:  return rflag >  0;
+        case OP_JGE: return rflag >= 0;
+        default:
+            printf("Unrecognized opcode\n");
+            exit(17);
+    }
+}
 
 void print_debug(machine_state* state)
 {
@@ -41,7 +60,7 @@ void print_debug(machine_state* state)
     putchar('\n');
 }
 
-void instruction_print(instruction* inst)
+void instruction_print(machine_state* state, instruction* inst)
 {
     printf(CLR_GREEN "%s", opcode_to_string(inst->opcode));
 
@@ -57,6 +76,11 @@ void instruction_print(instruction* inst)
     {
         operand_to_string(inst, i, buffer);
         printf(" %s", buffer);
+    }
+
+    if (is_conditional_jump(inst->opcode) && will_jump(state, inst))
+    {
+        printf(CLR_RED " (will jump)");
     }
 
     printf("\n" CLR_RESET);
@@ -121,7 +145,7 @@ int main(int argc, char* argv[])
         instruction_bytecode_print(inst);
 
         printf(CLR_GREEN);
-        instruction_print(inst);
+        instruction_print(&state, inst);
         printf(CLR_RESET);
 
         // Debug prompt

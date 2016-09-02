@@ -166,13 +166,6 @@ bool is_label(vec_bstring* parts)
             parts->items[0].data[parts->items[0].len - 1] == ':');
 }
 
-bool is_jump(byte opcode)
-{
-    return opcode == OP_JMP || opcode == OP_JE || opcode == OP_JNE ||
-           opcode == OP_JL || opcode == OP_JLE ||
-           opcode == OP_JG || opcode == OP_JGE;
-}
-
 vec_bstring parse_instruction_header(bstring* line, instruction* inst)
 {
     vec_bstring parts = vec_bstring_new();

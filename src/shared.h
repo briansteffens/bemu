@@ -100,4 +100,7 @@ byte* read_file(const char* fn, byte* out_bytes, int* out_bytes_read);
 
 int instruction_encoded_len(int operands);
 
+bool is_jump(byte opcode);
+bool is_conditional_jump(byte opcode);
+
 #endif

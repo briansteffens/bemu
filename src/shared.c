@@ -76,3 +76,15 @@ int instruction_encoded_len(int operands)
 {
     return 8 + operands * 8;
 }
+
+bool is_jump(byte opcode)
+{
+    return opcode == OP_JMP || is_conditional_jump(opcode);
+}
+
+bool is_conditional_jump(byte opcode)
+{
+    return opcode == OP_JE || opcode == OP_JNE ||
+           opcode == OP_JL || opcode == OP_JLE ||
+           opcode == OP_JG || opcode == OP_JGE;
+}
